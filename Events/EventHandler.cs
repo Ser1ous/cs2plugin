@@ -51,7 +51,9 @@ public class PluginEventHandler
         }
         else if (ctx?.State == MatchState.SidePick)
         {
-            // Knife is over, warmup is running — remind winner to pick side every round
+            // Keep warmup alive until a side is picked
+            CounterStrikeSharp.API.Server.ExecuteCommand("mp_warmup_start");
+            CounterStrikeSharp.API.Server.ExecuteCommand("mp_warmup_pausetimer 1");
             _matchManager.BroadcastSidePickInfo();
         }
 

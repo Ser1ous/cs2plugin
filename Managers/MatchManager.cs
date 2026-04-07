@@ -266,31 +266,29 @@ public class MatchManager
 
         Context.State = MatchState.SidePick;
         Context.KnifeWinnerCsTeam = winnerSide;
+        // Resolve NOW while players are still on their knife-round teams (before CS2's own reset shuffles them)
         Context.KnifeWinnerConfigTeam = ResolveConfigTeamBySide(winnerSide);
 
-        string name = Context.KnifeWinnerConfigTeam == 1
+        string winnerName = Context.KnifeWinnerConfigTeam == 1
             ? Context.Config.Team1.Name
             : Context.Config.Team2.Name;
-
-        string loserName = Context.KnifeWinnerConfigTeam == 1
-            ? Context.Config.Team2.Name
-            : Context.Config.Team1.Name;
-
-        // What side is the winner currently on after the knife round?
-        string winnerCurrentSide = winnerSide == TeamSide.CounterTerrorist ? "CT" : "T";
-        string loserCurrentSide  = winnerSide == TeamSide.CounterTerrorist ? "T"  : "CT";
 
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "knife_winner",
             $"{{\"winner_config_team\":{Context.KnifeWinnerConfigTeam},\"side\":\"{winnerSide}\"}}");
 
-        // Restart warmup immediately so the round-end win panel is replaced by warmup.
-        // Messages are broadcast after the restart so players see them on the new warmup screen.
+        BroadcastAll($" \x04[Match]\x01 \x09{winnerName}\x01 won the knife round!");
+
+        // Exec warmup settings BEFORE the restart so the server comes back in warmup.
+        // CS2 will naturally go to intermission — mp_restartgame 2 fires after that
+        // and the server restarts into warmup (because mp_warmup_start + warmuptime 9999
+        // are already set). Side-pick prompt is broadcast after the restart settles.
         _cfgExecutor.ExecCfg(_pluginConfig.WarmupCfgName);
         Server.ExecuteCommand("mp_warmup_start");
-        Server.ExecuteCommand("mp_restartgame 1");
+        Server.ExecuteCommand("mp_warmuptime 9999");
+        Server.ExecuteCommand("mp_warmup_pausetimer 1");
+        Server.ExecuteCommand("mp_restartgame 2");
 
-        // Broadcast after a small delay so messages arrive after the restart
-        _plugin.AddTimer(1.5f, () =>
+        _plugin.AddTimer(3f, () =>
         {
             if (Context?.State != MatchState.SidePick) return;
             BroadcastSidePickInfo();
@@ -354,9 +352,17 @@ public class MatchManager
 
         int playerConfigTeam = isTeam1 ? 1 : 2;
 
+        if (Context.KnifeWinnerConfigTeam == 0)
+        {
+            // Fallback: first registered player to pick wins (shouldn't normally happen)
+            Context.KnifeWinnerConfigTeam = playerConfigTeam;
+        }
+
         if (playerConfigTeam != Context.KnifeWinnerConfigTeam)
         {
-            player.PrintToChat(" \x02[Match]\x01 Only the knife round winner can pick the side.");
+            string winnerName = Context.KnifeWinnerConfigTeam == 1
+                ? Context.Config.Team1.Name : Context.Config.Team2.Name;
+            player.PrintToChat($" \x02[Match]\x01 Only \x09{winnerName}\x01 (knife winner) can pick the side.");
             return;
         }
 
@@ -405,23 +411,48 @@ public class MatchManager
         Context.Team1Score = 0;
         Context.Team2Score = 0;
 
-        _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
-        _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        // Move every registered player to their assigned side.
+        // SwitchTeam is instant and does not cause a round restart.
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (!player.IsValid || player.IsBot) continue;
+            string sid = player.SteamID.ToString();
+            int targetSide;
+            if (Context.Config.Team1.Players.ContainsKey(sid))
+                targetSide = (int)Context.Team1Side;
+            else if (Context.Config.Team2.Players.ContainsKey(sid))
+                targetSide = (int)Context.Team2Side;
+            else
+                continue;
+
+            if (player.TeamNum != targetSide)
+                player.SwitchTeam((CounterStrikeSharp.API.Modules.Utils.CsTeam)targetSide);
+        }
 
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} starts as \x09{SideName(Context.Team1Side)}\x01");
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
 
-        Server.ExecuteCommand("mp_restartgame 3");
+        // Apply competitive settings then end warmup.
+        // mp_warmup_end triggers CS2's own BeginMatch restart — no extra mp_restartgame needed.
+        _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
+        _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        Server.ExecuteCommand("mp_warmup_end");
 
-        BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
-        BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
-        BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
+        string matchId = Context.Config.MatchId;
+        string map = Context.Config.Maplist[Context.CurrentMapIndex];
+        int mapIdx = Context.CurrentMapIndex + 1;
 
-        _ = _db.LogMatchEventAsync(Context.Config.MatchId, "match_live",
-            $"{{\"map\":\"{Context.Config.Maplist[Context.CurrentMapIndex]}\"}}");
-        _ = _db.UpdateMatchAsync(Context.Config.MatchId,
-            0, 0, "live",
-            Context.Config.Maplist[Context.CurrentMapIndex], Context.CurrentMapIndex + 1);
+        // Broadcast LIVE after BeginMatch settles (mp_warmup_end triggers an internal restart)
+        _plugin.AddTimer(5f, () =>
+        {
+            if (Context?.State != MatchState.Live) return;
+            BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
+            BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
+            BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
+        });
+
+        _ = _db.LogMatchEventAsync(matchId, "match_live", $"{{\"map\":\"{map}\"}}");
+        _ = _db.UpdateMatchAsync(matchId, 0, 0, "live", map, mapIdx);
     }
 
     private static string SideName(TeamSide side) => side switch

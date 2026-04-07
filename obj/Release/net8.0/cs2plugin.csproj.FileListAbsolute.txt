@@ -10,3 +10,4 @@
 /Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Release/net8.0/refint/CS2MatchPlugin.dll
 /Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Release/net8.0/CS2MatchPlugin.pdb
 /Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Release/net8.0/ref/CS2MatchPlugin.dll
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Release/net8.0/cs2plugin.sourcelink.json
