@@ -1,0 +1,14 @@
+{
+  "ConfigVersion": 1,
+  "MySqlHost": "127.0.0.1",
+  "MySqlPort": 3306,
+  "MySqlDatabase": "cs2_matches",
+  "MySqlUser": "cs2user",
+  "MySqlPassword": "your_password_here",
+  "AimMapName": "aim_map",
+  "AimCfgName": "aim",
+  "WarmupCfgName": "warmup",
+  "KnifeCfgName": "knife",
+  "CompetitiveCfgName": "competitive",
+  "MinPlayersToStart": 0
+}

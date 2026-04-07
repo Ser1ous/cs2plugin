@@ -1,0 +1,100 @@
+using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Admin;
+using CS2MatchPlugin.Managers;
+using CS2MatchPlugin.State;
+
+namespace CS2MatchPlugin.Commands;
+
+public class AdminCommands
+{
+    private readonly MatchManager _matchManager;
+    private readonly AimManager _aimManager;
+
+    public AdminCommands(MatchManager matchManager, AimManager aimManager)
+    {
+        _matchManager = matchManager;
+        _aimManager = aimManager;
+    }
+
+    // Registered manually in CS2Plugin.OnLoad via AddCommand
+    public void OnLoadUrlCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!IsAdmin(caller))
+        {
+            info.ReplyToCommand("[CS2Match] You do not have permission to run this command.");
+            return;
+        }
+
+        if (info.ArgCount < 2)
+        {
+            info.ReplyToCommand("[CS2Match] Usage: ser_plug_load_url <url>");
+            return;
+        }
+
+        string url = info.GetArg(1);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out _))
+        {
+            info.ReplyToCommand($"[CS2Match] Invalid URL: {url}");
+            return;
+        }
+
+        info.ReplyToCommand($"[CS2Match] Loading match config from: {url}");
+        _ = _matchManager.LoadMatchFromUrlAsync(url, msg => info.ReplyToCommand($"[CS2Match] {msg}"));
+    }
+
+    public void OnAimModeCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!IsAdmin(caller))
+        {
+            info.ReplyToCommand("[CS2Match] You do not have permission to run this command.");
+            return;
+        }
+
+        _matchManager.AbortMatch();
+        _aimManager.EnterAimMode();
+        info.ReplyToCommand("[CS2Match] Switching to AIM mode.");
+    }
+
+    public void OnAbortMatchCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!IsAdmin(caller))
+        {
+            info.ReplyToCommand("[CS2Match] You do not have permission to run this command.");
+            return;
+        }
+
+        if (_matchManager.Context == null)
+        {
+            info.ReplyToCommand("[CS2Match] No active match to abort.");
+            return;
+        }
+
+        _matchManager.AbortMatch();
+        info.ReplyToCommand("[CS2Match] Match aborted.");
+    }
+
+    public void OnMatchStatusCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        var ctx = _matchManager.Context;
+        if (ctx == null)
+        {
+            info.ReplyToCommand("[CS2Match] No active match. Server is in AIM mode.");
+            return;
+        }
+
+        info.ReplyToCommand($"[CS2Match] Match: {ctx.Config.MatchId} | State: {ctx.State}");
+        info.ReplyToCommand($"[CS2Match] {ctx.Config.Team1.Name} {ctx.Team1Score} - {ctx.Team2Score} {ctx.Config.Team2.Name}");
+        info.ReplyToCommand($"[CS2Match] Map: {ctx.Config.Maplist[ctx.CurrentMapIndex]} ({ctx.CurrentMapIndex + 1}/{ctx.Config.Maplist.Count})");
+        info.ReplyToCommand($"[CS2Match] Series: {ctx.MapWinsTeam1}-{ctx.MapWinsTeam2}");
+    }
+
+    private static bool IsAdmin(CCSPlayerController? caller)
+    {
+        // Console (null caller) is always admin
+        if (caller == null) return true;
+        return AdminManager.PlayerHasPermissions(caller, "@css/root") ||
+               AdminManager.PlayerHasPermissions(caller, "@css/admin");
+    }
+}
