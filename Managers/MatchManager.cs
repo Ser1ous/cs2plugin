@@ -290,7 +290,7 @@ public class MatchManager
             Server.ExecuteCommand("mp_warmuptime 9999");
             Server.ExecuteCommand("mp_warmup_pausetimer 1");
             Server.ExecuteCommand("mp_restartgame 1");
-            BroadcastSidePickInfo();
+            // Side-pick prompt is broadcast by OnRoundStart once warmup begins.
         });
     }
 
@@ -434,20 +434,21 @@ public class MatchManager
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} starts as \x09{SideName(Context.Team1Side)}\x01");
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
 
-        // Apply competitive settings first so they are in effect for the first round.
+        // Apply competitive settings.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
 
-        // mp_warmup_end triggers CS2's own BeginMatch sequence — no mp_restartgame needed.
-        // Adding mp_restartgame after warmup_end causes a second mid-round restart that
-        // disconnects players (NETWORK_DISCONNECT_EXITING).
-        Server.ExecuteCommand("mp_warmup_end");
+        // mp_restartgame 1 gives CS2 one second for all cvars (mp_maxrounds, mp_halftime, etc.)
+        // to settle before the round begins. mp_warmup_end alone starts BeginMatch immediately
+        // in the same tick — before competitive.cfg's cvars are fully applied — causing the
+        // server to run the first round with stale knife settings (mp_maxrounds 1 → instant win).
+        Server.ExecuteCommand("mp_restartgame 1");
 
         string matchId = Context.Config.MatchId;
         string map = Context.Config.Maplist[Context.CurrentMapIndex];
         int mapIdx = Context.CurrentMapIndex + 1;
 
-        _plugin.AddTimer(2f, () =>
+        _plugin.AddTimer(3f, () =>
         {
             if (Context?.State != MatchState.Live) return;
             BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
