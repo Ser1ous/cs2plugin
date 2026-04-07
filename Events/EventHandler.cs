@@ -51,9 +51,10 @@ public class PluginEventHandler
         }
         else if (ctx?.State == MatchState.SidePick)
         {
-            // Keep warmup alive until a side is picked
-            CounterStrikeSharp.API.Server.ExecuteCommand("mp_warmup_start");
-            CounterStrikeSharp.API.Server.ExecuteCommand("mp_warmup_pausetimer 1");
+            // Do NOT issue any server commands here — calling mp_warmup_start inside
+            // OnRoundStart causes an immediate new round reset, which fires OnRoundStart
+            // again → infinite synchronous loop that floods the recv queue.
+            // Warmup is already pinned by the timer in HandleKnifeWinner.
             _matchManager.BroadcastSidePickInfo();
         }
 
@@ -323,16 +324,26 @@ public class PluginEventHandler
 
     private HookResult HandleSay(CCSPlayerController? player, CommandInfo info, bool teamOnly)
     {
+        Console.WriteLine($"[CS2Match] HandleSay called: player={player?.PlayerName}, isBot={player?.IsBot}, isValid={player?.IsValid}");
+        
         if (player == null || !player.IsValid || player.IsBot)
+        {
+            Console.WriteLine("[CS2Match] HandleSay: skipping - player is null, not valid, or bot");
             return HookResult.Continue;
+        }
 
         string message = info.GetArg(1);
+        Console.WriteLine($"[CS2Match] HandleSay: raw message='{message}'");
         if (string.IsNullOrWhiteSpace(message))
+        {
+            Console.WriteLine("[CS2Match] HandleSay: skipping - message is empty");
             return HookResult.Continue;
+        }
 
         // Route to player commands
-        _playerCommands.HandleChatMessage(player, message, teamOnly);
-
+        bool wasCommandHandled = _playerCommands.HandleChatMessage(player, message, teamOnly);
+        Console.WriteLine($"[CS2Match] HandleSay: HandleChatMessage returned {wasCommandHandled}");
+        
         // Log to DB if a match is active
         var ctx = _matchManager.Context;
         if (ctx != null)

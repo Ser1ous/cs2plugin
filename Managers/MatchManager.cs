@@ -278,19 +278,18 @@ public class MatchManager
 
         BroadcastAll($" \x04[Match]\x01 \x09{winnerName}\x01 won the knife round!");
 
-        // Exec warmup settings BEFORE the restart so the server comes back in warmup.
-        // CS2 will naturally go to intermission — mp_restartgame 2 fires after that
-        // and the server restarts into warmup (because mp_warmup_start + warmuptime 9999
-        // are already set). Side-pick prompt is broadcast after the restart settles.
-        _cfgExecutor.ExecCfg(_pluginConfig.WarmupCfgName);
-        Server.ExecuteCommand("mp_warmup_start");
-        Server.ExecuteCommand("mp_warmuptime 9999");
-        Server.ExecuteCommand("mp_warmup_pausetimer 1");
-        Server.ExecuteCommand("mp_restartgame 2");
-
-        _plugin.AddTimer(3f, () =>
+        // CS2 will run its own MatchEnded / intermission / reset sequence.
+        // We wait 5 seconds for CS2 to fully settle, then restart into warmup.
+        // This timer approach is reliable because it doesn't depend on any specific
+        // CS2 event firing — it always runs after the dust settles.
+        _plugin.AddTimer(5f, () =>
         {
             if (Context?.State != MatchState.SidePick) return;
+            Console.WriteLine("[CS2Match] SidePick: entering warmup for side selection");
+            Server.ExecuteCommand("mp_warmup_start");
+            Server.ExecuteCommand("mp_warmuptime 9999");
+            Server.ExecuteCommand("mp_warmup_pausetimer 1");
+            Server.ExecuteCommand("mp_restartgame 1");
             BroadcastSidePickInfo();
         });
     }
@@ -298,6 +297,8 @@ public class MatchManager
     public void BroadcastSidePickInfo()
     {
         if (Context?.State != MatchState.SidePick) return;
+
+        Console.WriteLine("[CS2Match] Broadcasting side pick info");
 
         string name = Context.KnifeWinnerConfigTeam == 1
             ? Context.Config.Team1.Name
@@ -338,6 +339,7 @@ public class MatchManager
     /// </summary>
     public void OnSidePick(CCSPlayerController player, string side)
     {
+        Console.WriteLine($"[CS2Match] OnSidePick: player={player.PlayerName} side={side} state={Context?.State}");
         if (Context?.State != MatchState.SidePick) return;
 
         string sid = player.SteamID.ToString();
@@ -432,18 +434,20 @@ public class MatchManager
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} starts as \x09{SideName(Context.Team1Side)}\x01");
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
 
-        // Apply competitive settings then end warmup.
-        // mp_warmup_end triggers CS2's own BeginMatch restart — no extra mp_restartgame needed.
+        // Apply competitive settings first so they are in effect for the first round.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
+
+        // mp_warmup_end triggers CS2's own BeginMatch sequence — no mp_restartgame needed.
+        // Adding mp_restartgame after warmup_end causes a second mid-round restart that
+        // disconnects players (NETWORK_DISCONNECT_EXITING).
         Server.ExecuteCommand("mp_warmup_end");
 
         string matchId = Context.Config.MatchId;
         string map = Context.Config.Maplist[Context.CurrentMapIndex];
         int mapIdx = Context.CurrentMapIndex + 1;
 
-        // Broadcast LIVE after BeginMatch settles (mp_warmup_end triggers an internal restart)
-        _plugin.AddTimer(5f, () =>
+        _plugin.AddTimer(2f, () =>
         {
             if (Context?.State != MatchState.Live) return;
             BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");

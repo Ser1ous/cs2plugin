@@ -1,0 +1,13 @@
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/bin/Debug/net8.0/CS2MatchPlugin.deps.json
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/bin/Debug/net8.0/CS2MatchPlugin.dll
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/bin/Debug/net8.0/CS2MatchPlugin.pdb
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/cs2plugin.csproj.AssemblyReference.cache
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/cs2plugin.GeneratedMSBuildEditorConfig.editorconfig
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/cs2plugin.AssemblyInfoInputs.cache
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/cs2plugin.AssemblyInfo.cs
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/cs2plugin.csproj.CoreCompileInputs.cache
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/cs2plugin.sourcelink.json
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/CS2MatchPlugin.dll
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/refint/CS2MatchPlugin.dll
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/CS2MatchPlugin.pdb
+/Users/alaksandrpaskevic/cs2plugin/cs2plugin/obj/Debug/net8.0/ref/CS2MatchPlugin.dll
