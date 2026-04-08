@@ -279,20 +279,12 @@ public class MatchManager
 
         BroadcastAll($" \x04[Match]\x01 \x09{winnerName}\x01 won the knife round!");
 
-        // CS2 will run its own MatchEnded / intermission / reset sequence.
-        // We wait 5 seconds for CS2 to fully settle, then restart into warmup.
-        // This timer approach is reliable because it doesn't depend on any specific
-        // CS2 event firing — it always runs after the dust settles.
-        _plugin.AddTimer(5f, () =>
-        {
-            if (Context?.State != MatchState.SidePick) return;
-            Console.WriteLine("[CS2Match] SidePick: entering warmup for side selection");
-            // Exec warmup.cfg to restore proper roundtime/maxrounds/money
-            // (knife.cfg left mp_roundtime 1.92 and mp_maxrounds 1 active).
-            _cfgExecutor.ExecCfg(_pluginConfig.WarmupCfgName);
-            Server.ExecuteCommand("mp_restartgame 1");
-            // Side-pick prompt is broadcast by OnRoundStart once warmup begins.
-        });
+        // Broadcast side pick options immediately and pause round 2.
+        // knife.cfg has mp_maxrounds 2 so the match doesn't end here.
+        // mp_pause_match queues a pause for the start of the next round's freeze time,
+        // giving the winner time to pick a side without round 2 actually playing.
+        BroadcastSidePickInfo();
+        Server.ExecuteCommand("mp_pause_match");
     }
 
     public void BroadcastSidePickInfo()
@@ -398,13 +390,17 @@ public class MatchManager
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "side_pick",
             $"{{\"team\":\"{name}\",\"side\":\"{resolvedSide}\"}}");
 
-        StartLive();
+        StartLiveFromKnife();
     }
 
     // -------------------------------------------------------------------------
     // Live
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Starts the live match from a warmup state (predetermined sides — no knife round).
+    /// Uses mp_warmup_end to exit warmup cleanly.
+    /// </summary>
     private void StartLive()
     {
         if (Context == null) return;
@@ -413,8 +409,53 @@ public class MatchManager
         Context.Team1Score = 0;
         Context.Team2Score = 0;
 
-        // Move every registered player to their assigned side.
-        // SwitchTeam is instant and does not cause a round restart.
+        MovePlayers();
+
+        BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} starts as \x09{SideName(Context.Team1Side)}\x01");
+        BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
+
+        // Apply all competitive cvars then exit warmup.
+        // mp_warmup_end is called after the cfg so all cvars are set before BeginMatch fires.
+        _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
+        _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        Server.ExecuteCommand("mp_warmup_end");
+
+        BroadcastLive();
+        LogLive();
+    }
+
+    /// <summary>
+    /// Starts the live match from the knife pause state.
+    /// Uses mp_restartgame to restart the match cleanly with competitive settings.
+    /// The game is currently paused during knife round 2 — mp_restartgame overrides that.
+    /// </summary>
+    private void StartLiveFromKnife()
+    {
+        if (Context == null) return;
+
+        Context.State = MatchState.Live;
+        Context.Team1Score = 0;
+        Context.Team2Score = 0;
+
+        MovePlayers();
+
+        BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} starts as \x09{SideName(Context.Team1Side)}\x01");
+        BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
+
+        // Apply all competitive cvars, then restart from 0-0.
+        // mp_restartgame overrides the knife pause and starts a fresh competitive match.
+        _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
+        _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        Server.ExecuteCommand("mp_restartgame 1");
+
+        // LIVE messages after restart settles (1s countdown + buffer)
+        BroadcastLive(delay: 3f);
+        LogLive();
+    }
+
+    private void MovePlayers()
+    {
+        if (Context == null) return;
         foreach (var player in Utilities.GetPlayers())
         {
             if (!player.IsValid || player.IsBot) continue;
@@ -430,29 +471,25 @@ public class MatchManager
             if (player.TeamNum != targetSide)
                 player.SwitchTeam((CounterStrikeSharp.API.Modules.Utils.CsTeam)targetSide);
         }
+    }
 
-        BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} starts as \x09{SideName(Context.Team1Side)}\x01");
-        BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
-
-        // competitive.cfg applies all match cvars and ends with mp_warmup_end.
-        // This is identical to MatchZy's live.cfg approach — all settings are applied
-        // before warmup ends, so the first round starts with correct cvars.
-        // No extra mp_restartgame: mp_warmup_end triggers BeginMatch internally.
-        _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
-        _cfgExecutor.ExecCvars(Context.Config.Cvars);
-
-        string matchId = Context.Config.MatchId;
-        string map = Context.Config.Maplist[Context.CurrentMapIndex];
-        int mapIdx = Context.CurrentMapIndex + 1;
-
-        _plugin.AddTimer(2f, () =>
+    private void BroadcastLive(float delay = 2f)
+    {
+        _plugin.AddTimer(delay, () =>
         {
             if (Context?.State != MatchState.Live) return;
             BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
             BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
             BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
         });
+    }
 
+    private void LogLive()
+    {
+        if (Context == null) return;
+        string matchId = Context.Config.MatchId;
+        string map = Context.Config.Maplist[Context.CurrentMapIndex];
+        int mapIdx = Context.CurrentMapIndex + 1;
         _ = _db.LogMatchEventAsync(matchId, "match_live", $"{{\"map\":\"{map}\"}}");
         _ = _db.UpdateMatchAsync(matchId, 0, 0, "live", map, mapIdx);
     }

@@ -51,10 +51,8 @@ public class PluginEventHandler
         }
         else if (ctx?.State == MatchState.SidePick)
         {
-            // Do NOT issue any server commands here — calling mp_warmup_start inside
-            // OnRoundStart causes an immediate new round reset, which fires OnRoundStart
-            // again → infinite synchronous loop that floods the recv queue.
-            // Warmup is already pinned by the timer in HandleKnifeWinner.
+            // Round 2 of knife is starting its freeze time — show side pick reminder.
+            // The match is already paused from HandleKnifeWinner's mp_pause_match.
             _matchManager.BroadcastSidePickInfo();
         }
 
@@ -419,15 +417,21 @@ public class PluginEventHandler
         }
 
         // Player is unassigned/spectator joining for the first time.
-        // Team1Side/Team2Side are always set from match load onward (default: Team1=T, Team2=CT),
-        // so we always have a definitive answer.
-        int expectedTeam = isConfigTeam1 ? (int)ctx.Team1Side : (int)ctx.Team2Side;
-        if (requestedTeam != expectedTeam)
+        // Only enforce the expected-side check once sides are actually assigned
+        // (i.e. after knife round — Team1Side != None). During warmup and knife
+        // phases Team1Side/Team2Side are None, so we allow the join freely to
+        // avoid blocking CS2's own team-reset during round restarts.
+        TeamSide assignedSide = isConfigTeam1 ? ctx.Team1Side : ctx.Team2Side;
+        if (assignedSide != TeamSide.None)
         {
-            string assignedName = expectedTeam == (int)TeamSide.CounterTerrorist ? "CT" : "T";
-            string configTeamName = isConfigTeam1 ? ctx.Config.Team1.Name : ctx.Config.Team2.Name;
-            player.PrintToChat($" \x02[Match]\x01 {configTeamName} plays as \x09{assignedName}\x01 — please join that side.");
-            return HookResult.Stop;
+            int expectedTeam = (int)assignedSide;
+            if (requestedTeam != expectedTeam)
+            {
+                string assignedName = expectedTeam == (int)TeamSide.CounterTerrorist ? "CT" : "T";
+                string configTeamName = isConfigTeam1 ? ctx.Config.Team1.Name : ctx.Config.Team2.Name;
+                player.PrintToChat($" \x02[Match]\x01 {configTeamName} plays as \x09{assignedName}\x01 — please join that side.");
+                return HookResult.Stop;
+            }
         }
 
         return HookResult.Continue;
