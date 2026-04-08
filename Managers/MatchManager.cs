@@ -190,6 +190,14 @@ public class MatchManager
         Context.State = MatchState.Warmup;
         _readyManager.Reset();
 
+        // Set Premier mode before warmup cfg so the entire match session
+        // (warmup → knife → live) initialises game rules in the correct mode.
+        // game_type/game_mode must be applied before the first round starts,
+        // not just before mp_restartgame, because CS2 bakes the scoreboard type
+        // into the game rules object at round initialisation.
+        Server.ExecuteCommand("game_type 0");
+        Server.ExecuteCommand("game_mode 2");
+
         _cfgExecutor.ExecCfg(_pluginConfig.WarmupCfgName);
         Server.ExecuteCommand("mp_warmup_start");
 
@@ -456,10 +464,10 @@ public class MatchManager
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
         Server.ExecuteCommand("mp_unpause_match");
-        Server.ExecuteCommand("mp_restartgame 1");
+        Server.ExecuteCommand("mp_restartgame 3");
 
-        // LIVE messages after restart settles (1s countdown + buffer)
-        BroadcastLive(delay: 3f);
+        // LIVE messages after restart settles (3s countdown + buffer)
+        BroadcastLive(delay: 5f);
         LogLive();
     }
 
