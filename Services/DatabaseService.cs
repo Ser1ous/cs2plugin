@@ -115,23 +115,40 @@ public class DatabaseService
     id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
     match_id             VARCHAR(64) NOT NULL,
     steamid              BIGINT UNSIGNED NOT NULL,
-    player_name          VARCHAR(128),
+    player_name          VARCHAR(255),
     config_team          TINYINT NOT NULL,
-    team_name            VARCHAR(128),
+    team_name            VARCHAR(255) NOT NULL DEFAULT '',
     kills                INT NOT NULL DEFAULT 0,
     deaths               INT NOT NULL DEFAULT 0,
-    assists              INT NOT NULL DEFAULT 0,
-    headshots            INT NOT NULL DEFAULT 0,
     damage_dealt         INT NOT NULL DEFAULT 0,
-    damage_taken         INT NOT NULL DEFAULT 0,
-    he_damage_dealt      INT NOT NULL DEFAULT 0,
-    he_damage_taken      INT NOT NULL DEFAULT 0,
+    assists              INT NOT NULL DEFAULT 0,
+    kills_5k             INT NOT NULL DEFAULT 0,
+    kills_4k             INT NOT NULL DEFAULT 0,
+    kills_3k             INT NOT NULL DEFAULT 0,
+    kills_2k             INT NOT NULL DEFAULT 0,
+    utility_count        INT NOT NULL DEFAULT 0,
     util_damage          INT NOT NULL DEFAULT 0,
-    armor_damage         INT NOT NULL DEFAULT 0,
+    util_successes       INT NOT NULL DEFAULT 0,
+    util_enemies         INT NOT NULL DEFAULT 0,
+    flash_count          INT NOT NULL DEFAULT 0,
+    flash_successes      INT NOT NULL DEFAULT 0,
+    hp_removed_total     INT NOT NULL DEFAULT 0,
+    hp_dealt_total       INT NOT NULL DEFAULT 0,
+    shots_fired          INT NOT NULL DEFAULT 0,
+    shots_on_target      INT NOT NULL DEFAULT 0,
+    v1_count             INT NOT NULL DEFAULT 0,
+    v1_wins              INT NOT NULL DEFAULT 0,
+    v2_count             INT NOT NULL DEFAULT 0,
+    v2_wins              INT NOT NULL DEFAULT 0,
+    entry_count          INT NOT NULL DEFAULT 0,
+    entry_wins           INT NOT NULL DEFAULT 0,
+    equipment_value      INT NOT NULL DEFAULT 0,
+    money_saved          INT NOT NULL DEFAULT 0,
+    kill_reward          INT NOT NULL DEFAULT 0,
+    live_time            INT NOT NULL DEFAULT 0,
+    headshot_kills       INT NOT NULL DEFAULT 0,
+    cash_earned          INT NOT NULL DEFAULT 0,
     enemies_flashed      INT NOT NULL DEFAULT 0,
-    flash_duration       FLOAT NOT NULL DEFAULT 0,
-    flash_assists        INT NOT NULL DEFAULT 0,
-    grenades_thrown      INT NOT NULL DEFAULT 0,
     bomb_plants          INT NOT NULL DEFAULT 0,
     bomb_defuses         INT NOT NULL DEFAULT 0,
     rounds_played        INT NOT NULL DEFAULT 0,
@@ -140,7 +157,7 @@ public class DatabaseService
     updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_match_player (match_id, steamid),
     INDEX idx_match_id (match_id)
-)",
+) COLLATE=utf8mb4_unicode_ci",
 
             @"CREATE TABLE IF NOT EXISTS chicken_kills (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -155,7 +172,6 @@ public class DatabaseService
 )",
 
             // match_rounds: one row per round, keyed by lobby_id + round_number.
-            // Foreign key to lobbies(id) is declared but only enforced if that table exists.
             @"CREATE TABLE IF NOT EXISTS match_rounds (
     id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     lobby_id     BIGINT UNSIGNED NOT NULL,
@@ -170,6 +186,28 @@ public class DatabaseService
     created_at   TIMESTAMP NULL,
     updated_at   TIMESTAMP NULL,
     UNIQUE KEY uq_lobby_round (lobby_id, round_number),
+    INDEX idx_lobby_id (lobby_id)
+) COLLATE=utf8mb4_unicode_ci",
+
+            // match_round_players: per-player stats for each round.
+            @"CREATE TABLE IF NOT EXISTS match_round_players (
+    id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    lobby_id        BIGINT UNSIGNED NOT NULL,
+    round_number    SMALLINT UNSIGNED NOT NULL,
+    steam_id        VARCHAR(32) NOT NULL,
+    name            VARCHAR(255) NOT NULL,
+    team            VARCHAR(10) NOT NULL,
+    kills           SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    deaths          SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    damage          SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    headshot_kills  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    assists         INT UNSIGNED NOT NULL DEFAULT 0,
+    equipment_value INT UNSIGNED NOT NULL DEFAULT 0,
+    money_spent     INT UNSIGNED NOT NULL DEFAULT 0,
+    cash_earned     INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP NULL,
+    updated_at      TIMESTAMP NULL,
+    UNIQUE KEY uq_lobby_round_player (lobby_id, round_number, steam_id),
     INDEX idx_lobby_id (lobby_id)
 ) COLLATE=utf8mb4_unicode_ci"
         };
@@ -401,53 +439,86 @@ VALUES (@mid, @round, @et, @t1, @t2, @winner)", conn);
             await using var cmd = new MySqlCommand(@"
 INSERT INTO match_scoreboard
   (match_id, steamid, player_name, config_team, team_name,
-   kills, deaths, assists, headshots,
-   damage_dealt, damage_taken, he_damage_dealt, he_damage_taken, util_damage, armor_damage,
-   enemies_flashed, flash_duration, flash_assists,
-   grenades_thrown, bomb_plants, bomb_defuses,
-   rounds_played, last_round)
+   kills, deaths, damage_dealt, assists,
+   kills_5k, kills_4k, kills_3k, kills_2k,
+   utility_count, util_damage, util_successes, util_enemies,
+   flash_count, flash_successes,
+   hp_removed_total, hp_dealt_total,
+   shots_fired, shots_on_target,
+   v1_count, v1_wins, v2_count, v2_wins,
+   entry_count, entry_wins,
+   equipment_value, money_saved, kill_reward, live_time,
+   headshot_kills, cash_earned, enemies_flashed,
+   bomb_plants, bomb_defuses, rounds_played, last_round)
 VALUES
   (@mid,@sid,@name,@ct,@tn,
-   @k,@d,@a,@hs,
-   @dmg,@dmgt,@hedmg,@hedmgt,@utildmg,@armordmg,
-   @ef,@fldur,@fla,
-   @gt,@bp,@bd,
-   @rp,@lr)
+   @k,@d,@dmg,@a,
+   @k5,@k4,@k3,@k2,
+   @uc,@udmg,@us,@ue,
+   @fc,@fs,
+   @hprem,@hpdlt,
+   @sf,@sot,
+   @v1c,@v1w,@v2c,@v2w,
+   @enc,@enw,
+   @eqv,@ms,@kr,@lt,
+   @hsk,@ce,@ef,
+   @bp,@bd,@rp,@lr)
 ON DUPLICATE KEY UPDATE
   player_name=VALUES(player_name),
-  kills=VALUES(kills), deaths=VALUES(deaths), assists=VALUES(assists), headshots=VALUES(headshots),
-  damage_dealt=VALUES(damage_dealt), damage_taken=VALUES(damage_taken),
-  he_damage_dealt=VALUES(he_damage_dealt), he_damage_taken=VALUES(he_damage_taken),
-  util_damage=VALUES(util_damage), armor_damage=VALUES(armor_damage),
-  enemies_flashed=VALUES(enemies_flashed), flash_duration=VALUES(flash_duration),
-  flash_assists=VALUES(flash_assists), grenades_thrown=VALUES(grenades_thrown),
+  kills=VALUES(kills), deaths=VALUES(deaths), damage_dealt=VALUES(damage_dealt), assists=VALUES(assists),
+  kills_5k=VALUES(kills_5k), kills_4k=VALUES(kills_4k), kills_3k=VALUES(kills_3k), kills_2k=VALUES(kills_2k),
+  utility_count=VALUES(utility_count), util_damage=VALUES(util_damage),
+  util_successes=VALUES(util_successes), util_enemies=VALUES(util_enemies),
+  flash_count=VALUES(flash_count), flash_successes=VALUES(flash_successes),
+  hp_removed_total=VALUES(hp_removed_total), hp_dealt_total=VALUES(hp_dealt_total),
+  v1_count=VALUES(v1_count), v1_wins=VALUES(v1_wins),
+  v2_count=VALUES(v2_count), v2_wins=VALUES(v2_wins),
+  entry_count=VALUES(entry_count), entry_wins=VALUES(entry_wins),
+  headshot_kills=VALUES(headshot_kills), cash_earned=VALUES(cash_earned), enemies_flashed=VALUES(enemies_flashed),
   bomb_plants=VALUES(bomb_plants), bomb_defuses=VALUES(bomb_defuses),
   rounds_played=VALUES(rounds_played), last_round=VALUES(last_round),
   updated_at=CURRENT_TIMESTAMP", conn);
 
-            cmd.Parameters.AddWithValue("@mid",    r.MatchId);
-            cmd.Parameters.AddWithValue("@sid",    r.SteamId);
-            cmd.Parameters.AddWithValue("@name",   (object?)r.PlayerName ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@ct",     r.ConfigTeam);
-            cmd.Parameters.AddWithValue("@tn",     (object?)r.TeamName ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@k",      r.Kills);
-            cmd.Parameters.AddWithValue("@d",      r.Deaths);
-            cmd.Parameters.AddWithValue("@a",      r.Assists);
-            cmd.Parameters.AddWithValue("@hs",     r.Headshots);
-            cmd.Parameters.AddWithValue("@dmg",    r.DamageDealt);
-            cmd.Parameters.AddWithValue("@dmgt",   r.DamageTaken);
-            cmd.Parameters.AddWithValue("@hedmg",  r.HeDamageDealt);
-            cmd.Parameters.AddWithValue("@hedmgt", r.HeDamageTaken);
-            cmd.Parameters.AddWithValue("@utildmg",r.UtilDamage);
-            cmd.Parameters.AddWithValue("@armordmg",r.ArmorDamage);
-            cmd.Parameters.AddWithValue("@ef",     r.EnemiesFlashed);
-            cmd.Parameters.AddWithValue("@fldur",  r.FlashDuration);
-            cmd.Parameters.AddWithValue("@fla",    r.FlashAssists);
-            cmd.Parameters.AddWithValue("@gt",     r.GrenadesThrown);
-            cmd.Parameters.AddWithValue("@bp",     r.BombPlants);
-            cmd.Parameters.AddWithValue("@bd",     r.BombDefuses);
-            cmd.Parameters.AddWithValue("@rp",     r.RoundsPlayed);
-            cmd.Parameters.AddWithValue("@lr",     r.LastRound);
+            cmd.Parameters.AddWithValue("@mid",  r.MatchId);
+            cmd.Parameters.AddWithValue("@sid",  r.SteamId);
+            cmd.Parameters.AddWithValue("@name", (object?)r.PlayerName ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@ct",   r.ConfigTeam);
+            cmd.Parameters.AddWithValue("@tn",   r.TeamName ?? "");
+            cmd.Parameters.AddWithValue("@k",    r.Kills);
+            cmd.Parameters.AddWithValue("@d",    r.Deaths);
+            cmd.Parameters.AddWithValue("@dmg",  r.DamageDealt);
+            cmd.Parameters.AddWithValue("@a",    r.Assists);
+            cmd.Parameters.AddWithValue("@k5",   r.Kills5k);
+            cmd.Parameters.AddWithValue("@k4",   r.Kills4k);
+            cmd.Parameters.AddWithValue("@k3",   r.Kills3k);
+            cmd.Parameters.AddWithValue("@k2",   r.Kills2k);
+            cmd.Parameters.AddWithValue("@uc",   r.UtilityCount);
+            cmd.Parameters.AddWithValue("@udmg", r.UtilDamage);
+            cmd.Parameters.AddWithValue("@us",   0);
+            cmd.Parameters.AddWithValue("@ue",   0);
+            cmd.Parameters.AddWithValue("@fc",   r.FlashCount);
+            cmd.Parameters.AddWithValue("@fs",   r.FlashSuccesses);
+            cmd.Parameters.AddWithValue("@hprem",r.DamageDealt);
+            cmd.Parameters.AddWithValue("@hpdlt",r.DamageDealt);
+            cmd.Parameters.AddWithValue("@sf",   0);
+            cmd.Parameters.AddWithValue("@sot",  0);
+            cmd.Parameters.AddWithValue("@v1c",  0);
+            cmd.Parameters.AddWithValue("@v1w",  0);
+            cmd.Parameters.AddWithValue("@v2c",  0);
+            cmd.Parameters.AddWithValue("@v2w",  0);
+            cmd.Parameters.AddWithValue("@enc",  0);
+            cmd.Parameters.AddWithValue("@enw",  0);
+            cmd.Parameters.AddWithValue("@eqv",  0);
+            cmd.Parameters.AddWithValue("@ms",   0);
+            cmd.Parameters.AddWithValue("@kr",   0);
+            cmd.Parameters.AddWithValue("@lt",   0);
+            cmd.Parameters.AddWithValue("@hsk",  r.Headshots);
+            cmd.Parameters.AddWithValue("@ce",   0);
+            cmd.Parameters.AddWithValue("@ef",   r.EnemiesFlashed);
+            cmd.Parameters.AddWithValue("@bp",   r.BombPlants);
+            cmd.Parameters.AddWithValue("@bd",   r.BombDefuses);
+            cmd.Parameters.AddWithValue("@rp",   r.RoundsPlayed);
+            cmd.Parameters.AddWithValue("@lr",   r.LastRound);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB UpsertScoreboard: {ex.Message}"); }
@@ -519,6 +590,47 @@ WHERE id=@lid", conn);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB FinishLobby: {ex.Message}"); }
+    }
+
+    // -------------------------------------------------------------------------
+    // match_round_players
+    // -------------------------------------------------------------------------
+
+    public async Task InsertRoundPlayersAsync(IEnumerable<RoundPlayerRow> rows)
+    {
+        if (!_initialized || _dataSource == null) return;
+        try
+        {
+            await using var conn = await _dataSource.OpenConnectionAsync();
+            foreach (var r in rows)
+            {
+                await using var cmd = new MySqlCommand(@"
+INSERT INTO match_round_players
+  (lobby_id, round_number, steam_id, name, team,
+   kills, deaths, damage, headshot_kills, assists,
+   created_at, updated_at)
+VALUES
+  (@lid, @rnum, @sid, @name, @team,
+   @k, @d, @dmg, @hsk, @a,
+   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+  kills=VALUES(kills), deaths=VALUES(deaths), damage=VALUES(damage),
+  headshot_kills=VALUES(headshot_kills), assists=VALUES(assists),
+  updated_at=CURRENT_TIMESTAMP", conn);
+                cmd.Parameters.AddWithValue("@lid",  r.LobbyId);
+                cmd.Parameters.AddWithValue("@rnum", r.RoundNumber);
+                cmd.Parameters.AddWithValue("@sid",  r.SteamId);
+                cmd.Parameters.AddWithValue("@name", r.Name);
+                cmd.Parameters.AddWithValue("@team", r.Team);
+                cmd.Parameters.AddWithValue("@k",    r.Kills);
+                cmd.Parameters.AddWithValue("@d",    r.Deaths);
+                cmd.Parameters.AddWithValue("@dmg",  r.Damage);
+                cmd.Parameters.AddWithValue("@hsk",  r.HeadshotKills);
+                cmd.Parameters.AddWithValue("@a",    r.Assists);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"[CS2Match] DB InsertRoundPlayers: {ex.Message}"); }
     }
 
     // -------------------------------------------------------------------------
@@ -610,22 +722,35 @@ public record ScoreboardRow(
     string? TeamName,
     int Kills,
     int Deaths,
-    int Assists,
-    int Headshots,
     int DamageDealt,
-    int DamageTaken,
-    int HeDamageDealt,
-    int HeDamageTaken,
+    int Assists,
+    int Kills5k,
+    int Kills4k,
+    int Kills3k,
+    int Kills2k,
+    int UtilityCount,
     int UtilDamage,
-    int ArmorDamage,
+    int FlashCount,
+    int FlashSuccesses,
+    int Headshots,
     int EnemiesFlashed,
-    float FlashDuration,
-    int FlashAssists,
-    int GrenadesThrown,
     int BombPlants,
     int BombDefuses,
     int RoundsPlayed,
     int LastRound
+);
+
+public record RoundPlayerRow(
+    ulong LobbyId,
+    int RoundNumber,
+    string SteamId,
+    string Name,
+    string Team,
+    int Kills,
+    int Deaths,
+    int Damage,
+    int HeadshotKills,
+    int Assists
 );
 
 public record ChickenKillData(

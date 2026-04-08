@@ -141,6 +141,14 @@ public class MatchManager
             return;
         }
 
+        // mp_restartgame on the same map triggers OnMapStart but we must NOT
+        // reset state when a live match is already in progress (e.g. knife→live restart).
+        if (Context.State == MatchState.Live || Context.State == MatchState.Paused)
+        {
+            Console.WriteLine($"[CS2Match] OnMapStart during {Context.State} — skipping warmup reset");
+            return;
+        }
+
         // Reset sides to default for new map — knife round will reassign them
         Context.Team1Side = TeamSide.Terrorist;
         Context.Team2Side = TeamSide.CounterTerrorist;
@@ -443,9 +451,11 @@ public class MatchManager
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
 
         // Apply all competitive cvars, then restart from 0-0.
-        // mp_restartgame overrides the knife pause and starts a fresh competitive match.
+        // mp_unpause_match must come before mp_restartgame — the pause state from
+        // mp_pause_match survives a game restart otherwise.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        Server.ExecuteCommand("mp_unpause_match");
         Server.ExecuteCommand("mp_restartgame 1");
 
         // LIVE messages after restart settles (1s countdown + buffer)
@@ -557,7 +567,10 @@ public class MatchManager
             Context.Team1Score, Context.Team2Score, "live",
             Context.Config.Maplist[Context.CurrentMapIndex], Context.CurrentMapIndex + 1);
 
-        // Flush live player stats to the scoreboard table
+        // Categorise this round's multi-kills before flushing (resets RoundKills)
+        ProcessRoundMultiKills();
+
+        // Flush cumulative scoreboard and per-round player stats
         FlushScoreboard(round);
 
         // Halftime: swap sides at round 12 (configurable via mp_maxrounds/2)
@@ -566,9 +579,10 @@ public class MatchManager
             && int.TryParse(mrStr, out int mr))
             maxRounds = mr;
 
-        // Write per-round row to match_rounds
+        // Write per-round row to match_rounds and per-player row to match_round_players
         if (ulong.TryParse(Context.Config.LobbyId, out ulong lobbyId))
         {
+            FlushRoundPlayers(round, lobbyId);
             string roundWinner = (@event.Winner == (int)TeamSide.CounterTerrorist)
                 ? (Context.Team1Side == TeamSide.CounterTerrorist ? "team1" : "team2")
                 : (Context.Team1Side == TeamSide.Terrorist ? "team1" : "team2");
@@ -788,24 +802,70 @@ public class MatchManager
                 stats.TeamName,
                 stats.Kills,
                 stats.Deaths,
-                stats.Assists,
-                stats.Headshots,
                 stats.DamageDealt,
-                stats.DamageTaken,
-                stats.HeDamageDealt,
-                stats.HeDamageTaken,
-                stats.UtilDamage,
-                stats.ArmorDamage,
-                stats.EnemiesFlashed,
-                stats.TotalFlashDuration,
-                stats.FlashAssists,
+                stats.Assists,
+                stats.Kills5k,
+                stats.Kills4k,
+                stats.Kills3k,
+                stats.Kills2k,
                 stats.GrenadesThrown,
+                stats.UtilDamage,
+                stats.FlashAssists, // flash_count approximated by flash assists
+                stats.FlashAssists,
+                stats.Headshots,
+                stats.EnemiesFlashed,
                 stats.BombPlants,
                 stats.BombDefuses,
                 stats.RoundsPlayed,
                 round
             ));
         }
+    }
+
+    private void ProcessRoundMultiKills()
+    {
+        if (Context == null) return;
+        foreach (var stats in Context.PlayerStats.Values)
+        {
+            switch (stats.RoundKills)
+            {
+                case >= 5: stats.Kills5k++; break;
+                case 4:    stats.Kills4k++; break;
+                case 3:    stats.Kills3k++; break;
+                case 2:    stats.Kills2k++; break;
+            }
+            stats.RoundKills = 0;
+        }
+    }
+
+    private void FlushRoundPlayers(int round, ulong lobbyId)
+    {
+        if (Context == null) return;
+        var rows = new List<RoundPlayerRow>();
+        foreach (var (steamId, stats) in Context.PlayerStats)
+        {
+            string team = stats.ConfigTeam == 1 ? "team1" : "team2";
+            rows.Add(new RoundPlayerRow(
+                lobbyId,
+                round,
+                steamId.ToString(),
+                stats.PlayerName,
+                team,
+                stats.RoundKills,
+                stats.RoundDeaths,
+                stats.RoundDamageDealt,
+                stats.RoundHeadshots,
+                stats.RoundAssists
+            ));
+            // Reset per-round counters
+            stats.RoundKills       = 0;
+            stats.RoundDeaths      = 0;
+            stats.RoundDamageDealt = 0;
+            stats.RoundHeadshots   = 0;
+            stats.RoundAssists     = 0;
+        }
+        if (rows.Count > 0)
+            _ = _db.InsertRoundPlayersAsync(rows);
     }
 
     private PlayerStats GetOrCreateStats(ulong steamId, string playerName, int configTeam, string teamName)
@@ -835,12 +895,14 @@ public class MatchManager
         {
             var aStats = GetOrCreateStats(attackerSteamId, attackerName, attackerConfigTeam, attackerTeamName);
             aStats.Kills++;
-            if (headshot) aStats.Headshots++;
+            aStats.RoundKills++;
+            if (headshot) { aStats.Headshots++; aStats.RoundHeadshots++; }
             aStats.RoundsPlayed = round;
         }
 
         var vStats = GetOrCreateStats(victimSteamId, victimName, victimConfigTeam, victimTeamName);
         vStats.Deaths++;
+        vStats.RoundDeaths++;
         vStats.RoundsPlayed = round;
     }
 
@@ -850,6 +912,7 @@ public class MatchManager
         if (Context?.State != MatchState.Live) return;
         var stats = GetOrCreateStats(assistSteamId, assistName, configTeam, teamName);
         stats.Assists++;
+        stats.RoundAssists++;
         if (flashAssist) stats.FlashAssists++;
         stats.RoundsPlayed = round;
     }
@@ -878,7 +941,8 @@ public class MatchManager
             var aStats = GetOrCreateStats(attackerSteamId, attackerName, attackerConfigTeam, attackerTeamName);
             if (enemyDamage)
             {
-                aStats.DamageDealt += dmgHealth;
+                aStats.DamageDealt      += dmgHealth;
+                aStats.RoundDamageDealt += dmgHealth;
                 aStats.ArmorDamage += dmgArmor;
                 if (isHe)   aStats.HeDamageDealt += dmgHealth;
                 if (isUtil) aStats.UtilDamage    += dmgHealth;

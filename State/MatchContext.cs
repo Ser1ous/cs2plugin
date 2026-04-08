@@ -52,31 +52,44 @@ public class PlayerStats
     public int ConfigTeam    { get; set; }  // 1 or 2
     public string TeamName   { get; set; } = "";
 
-    // --- Core ---
+    // --- Core (cumulative) ---
     public int Kills         { get; set; }
     public int Deaths        { get; set; }
     public int Assists       { get; set; }
     public int Headshots     { get; set; }
 
+    // --- Multi-kills (cumulative) ---
+    public int Kills5k { get; set; }
+    public int Kills4k { get; set; }
+    public int Kills3k { get; set; }
+    public int Kills2k { get; set; }
+
     // --- Damage ---
-    public int DamageDealt   { get; set; }  // total HP damage dealt (all weapons)
-    public int DamageTaken   { get; set; }  // total HP damage received
-    public int HeDamageDealt { get; set; }  // HE grenade damage dealt
-    public int HeDamageTaken { get; set; }  // HE grenade damage received
-    public int UtilDamage    { get; set; }  // molotov/incendiary damage dealt
-    public int ArmorDamage   { get; set; }  // armor damage dealt
+    public int DamageDealt   { get; set; }
+    public int DamageTaken   { get; set; }
+    public int HeDamageDealt { get; set; }
+    public int HeDamageTaken { get; set; }
+    public int UtilDamage    { get; set; }
+    public int ArmorDamage   { get; set; }
 
     // --- Flash ---
-    public int EnemiesFlashed       { get; set; }  // number of enemies blinded by this player
-    public float TotalFlashDuration { get; set; }  // total seconds of blindness caused
-    public int FlashAssists         { get; set; }  // kills where player flashed the victim
+    public int EnemiesFlashed       { get; set; }
+    public float TotalFlashDuration { get; set; }
+    public int FlashAssists         { get; set; }
 
     // --- Utility ---
-    public int GrenadesThrown { get; set; }  // all grenades thrown
+    public int GrenadesThrown { get; set; }
 
     // --- Bomb ---
     public int BombPlants  { get; set; }
     public int BombDefuses { get; set; }
+
+    // --- Per-round counters (reset at each round end) ---
+    public int RoundKills       { get; set; }
+    public int RoundDeaths      { get; set; }
+    public int RoundDamageDealt { get; set; }
+    public int RoundHeadshots   { get; set; }
+    public int RoundAssists     { get; set; }
 
     // --- Tracking ---
     public int RoundsPlayed { get; set; }

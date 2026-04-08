@@ -41,8 +41,18 @@ public class MapChanger
             }
             else
             {
-                Console.WriteLine($"[CS2Match] Changing map to: {mapName}");
-                Server.ExecuteCommand($"changelevel {mapName}");
+                // Workshop maps have a numeric ID — use host_workshop_map instead of changelevel
+                bool isWorkshop = ulong.TryParse(mapName, out _);
+                if (isWorkshop)
+                {
+                    Console.WriteLine($"[CS2Match] Loading workshop map: {mapName}");
+                    Server.ExecuteCommand($"host_workshop_map {mapName}");
+                }
+                else
+                {
+                    Console.WriteLine($"[CS2Match] Changing map to: {mapName}");
+                    Server.ExecuteCommand($"changelevel {mapName}");
+                }
             }
         });
     }
