@@ -96,6 +96,12 @@ public class MatchManager
                 config.NumMaps
             ));
 
+            // Set game_type/game_mode BEFORE the map loads so CS2 initialises
+            // the correct game rules (scoreboard, HUD) from the very first round.
+            // These ConVars have no effect if set after the map is already loaded.
+            Server.ExecuteCommand($"game_type {_pluginConfig.GameType}");
+            Server.ExecuteCommand($"game_mode {_pluginConfig.GameMode}");
+
             string targetMap = config.Maplist[0];
             bool alreadyOnMap = string.Equals(Server.MapName, targetMap, StringComparison.OrdinalIgnoreCase);
 
@@ -189,14 +195,6 @@ public class MatchManager
         if (Context == null) return;
         Context.State = MatchState.Warmup;
         _readyManager.Reset();
-
-        // Set Premier mode before warmup cfg so the entire match session
-        // (warmup → knife → live) initialises game rules in the correct mode.
-        // game_type/game_mode must be applied before the first round starts,
-        // not just before mp_restartgame, because CS2 bakes the scoreboard type
-        // into the game rules object at round initialisation.
-        Server.ExecuteCommand("game_type 0");
-        Server.ExecuteCommand("game_mode 2");
 
         _cfgExecutor.ExecCfg(_pluginConfig.WarmupCfgName);
         Server.ExecuteCommand("mp_warmup_start");
