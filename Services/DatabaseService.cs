@@ -152,7 +152,26 @@ public class DatabaseService
     weapon           VARCHAR(64),
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_match_id (match_id)
-)"
+)",
+
+            // match_rounds: one row per round, keyed by lobby_id + round_number.
+            // Foreign key to lobbies(id) is declared but only enforced if that table exists.
+            @"CREATE TABLE IF NOT EXISTS match_rounds (
+    id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    lobby_id     BIGINT UNSIGNED NOT NULL,
+    round_number SMALLINT UNSIGNED NOT NULL,
+    winner       VARCHAR(10) NOT NULL,
+    reason_code  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    map          VARCHAR(255),
+    team1_score  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    team2_score  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    half         VARCHAR(10) NOT NULL DEFAULT 'first',
+    team1_is_ct  TINYINT(1) NOT NULL DEFAULT 1,
+    created_at   TIMESTAMP NULL,
+    updated_at   TIMESTAMP NULL,
+    UNIQUE KEY uq_lobby_round (lobby_id, round_number),
+    INDEX idx_lobby_id (lobby_id)
+) COLLATE=utf8mb4_unicode_ci"
         };
 
         try
@@ -449,6 +468,60 @@ ON DUPLICATE KEY UPDATE
     }
 
     // -------------------------------------------------------------------------
+    // match_rounds
+    // -------------------------------------------------------------------------
+
+    public async Task InsertMatchRoundAsync(MatchRoundRow r)
+    {
+        if (!_initialized || _dataSource == null) return;
+        try
+        {
+            await using var conn = await _dataSource.OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(@"
+INSERT INTO match_rounds
+  (lobby_id, round_number, winner, reason_code, map, team1_score, team2_score, half, team1_is_ct, created_at, updated_at)
+VALUES
+  (@lid, @rnum, @winner, @reason, @map, @t1, @t2, @half, @t1ct, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+  winner=VALUES(winner), reason_code=VALUES(reason_code),
+  team1_score=VALUES(team1_score), team2_score=VALUES(team2_score),
+  half=VALUES(half), team1_is_ct=VALUES(team1_is_ct),
+  updated_at=CURRENT_TIMESTAMP", conn);
+            cmd.Parameters.AddWithValue("@lid",    r.LobbyId);
+            cmd.Parameters.AddWithValue("@rnum",   r.RoundNumber);
+            cmd.Parameters.AddWithValue("@winner", r.Winner);
+            cmd.Parameters.AddWithValue("@reason", r.ReasonCode);
+            cmd.Parameters.AddWithValue("@map",    (object?)r.Map ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@t1",     r.Team1Score);
+            cmd.Parameters.AddWithValue("@t2",     r.Team2Score);
+            cmd.Parameters.AddWithValue("@half",   r.Half);
+            cmd.Parameters.AddWithValue("@t1ct",   r.Team1IsCt ? 1 : 0);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex) { Console.WriteLine($"[CS2Match] DB InsertMatchRound: {ex.Message}"); }
+    }
+
+    // -------------------------------------------------------------------------
+    // lobbies
+    // -------------------------------------------------------------------------
+
+    public async Task FinishLobbyAsync(ulong lobbyId, string demoName)
+    {
+        if (!_initialized || _dataSource == null) return;
+        try
+        {
+            await using var conn = await _dataSource.OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(@"
+UPDATE lobbies SET status='finished', demo_name=@demo, updated_at=CURRENT_TIMESTAMP
+WHERE id=@lid", conn);
+            cmd.Parameters.AddWithValue("@lid",  lobbyId);
+            cmd.Parameters.AddWithValue("@demo", demoName);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex) { Console.WriteLine($"[CS2Match] DB FinishLobby: {ex.Message}"); }
+    }
+
+    // -------------------------------------------------------------------------
     // chicken_kills
     // -------------------------------------------------------------------------
 
@@ -562,4 +635,16 @@ public record ChickenKillData(
     string? KillerName,
     int? KillerTeam,
     string? Weapon
+);
+
+public record MatchRoundRow(
+    ulong LobbyId,
+    int RoundNumber,
+    string Winner,      // "team1" or "team2"
+    int ReasonCode,     // EventRoundEnd.Reason
+    string? Map,
+    int Team1Score,
+    int Team2Score,
+    string Half,        // "first", "second", or "overtime"
+    bool Team1IsCt
 );

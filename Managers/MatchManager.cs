@@ -233,10 +233,11 @@ public class MatchManager
 
         Context.State = MatchState.Knife;
         _cfgExecutor.ExecCfg(_pluginConfig.KnifeCfgName);
-        Server.ExecuteCommand("mp_warmup_end");
-        // mp_restartgame 1 — short restart so knife cfg applies.
-        // We use 1 second so the "match ended" win panel has no time to display.
+        // Match MatchZy's knife.cfg order: restartgame first (1s countdown),
+        // then warmup_end (exits warmup immediately). By the time the restart fires
+        // warmup has ended and the round starts cleanly with knife settings.
         Server.ExecuteCommand("mp_restartgame 1");
+        Server.ExecuteCommand("mp_warmup_end");
 
         BroadcastAll(" \x04[Match]\x01 \x09KNIFE ROUND\x01 — winner picks side!");
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "knife_start");
@@ -286,9 +287,9 @@ public class MatchManager
         {
             if (Context?.State != MatchState.SidePick) return;
             Console.WriteLine("[CS2Match] SidePick: entering warmup for side selection");
-            Server.ExecuteCommand("mp_warmup_start");
-            Server.ExecuteCommand("mp_warmuptime 9999");
-            Server.ExecuteCommand("mp_warmup_pausetimer 1");
+            // Exec warmup.cfg to restore proper roundtime/maxrounds/money
+            // (knife.cfg left mp_roundtime 1.92 and mp_maxrounds 1 active).
+            _cfgExecutor.ExecCfg(_pluginConfig.WarmupCfgName);
             Server.ExecuteCommand("mp_restartgame 1");
             // Side-pick prompt is broadcast by OnRoundStart once warmup begins.
         });
@@ -309,7 +310,6 @@ public class MatchManager
         string winnerCurrentSide = Context.KnifeWinnerCsTeam == TeamSide.CounterTerrorist ? "CT" : "T";
         string loserCurrentSide  = Context.KnifeWinnerCsTeam == TeamSide.CounterTerrorist ? "T"  : "CT";
 
-        BroadcastAll($" \x04[Match]\x01 \x09{name}\x01 won the knife round!");
         BroadcastAll($" \x04[Match]\x01 {name} is on \x09{winnerCurrentSide}\x01 | {loserName} is on \x09{loserCurrentSide}\x01");
         BroadcastAll($" \x04[Match]\x01 {name}: \x09.stay\x01 = keep {winnerCurrentSide}  |  \x09.switch\x01 = swap to {loserCurrentSide}");
         BroadcastAll($" \x04[Match]\x01 (also accepted: \x09.ct\x01 or \x09.t\x01)");
@@ -434,21 +434,18 @@ public class MatchManager
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} starts as \x09{SideName(Context.Team1Side)}\x01");
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
 
-        // Apply competitive settings.
+        // competitive.cfg applies all match cvars and ends with mp_warmup_end.
+        // This is identical to MatchZy's live.cfg approach — all settings are applied
+        // before warmup ends, so the first round starts with correct cvars.
+        // No extra mp_restartgame: mp_warmup_end triggers BeginMatch internally.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
-
-        // mp_restartgame 1 gives CS2 one second for all cvars (mp_maxrounds, mp_halftime, etc.)
-        // to settle before the round begins. mp_warmup_end alone starts BeginMatch immediately
-        // in the same tick — before competitive.cfg's cvars are fully applied — causing the
-        // server to run the first round with stale knife settings (mp_maxrounds 1 → instant win).
-        Server.ExecuteCommand("mp_restartgame 1");
 
         string matchId = Context.Config.MatchId;
         string map = Context.Config.Maplist[Context.CurrentMapIndex];
         int mapIdx = Context.CurrentMapIndex + 1;
 
-        _plugin.AddTimer(3f, () =>
+        _plugin.AddTimer(2f, () =>
         {
             if (Context?.State != MatchState.Live) return;
             BroadcastAll(" \x04[Match]\x01 \x04!!!! LIVE !!!!\x01");
@@ -477,6 +474,26 @@ public class MatchManager
 
         if (Context.State == MatchState.Knife)
         {
+            // Insert knife round as round 0 before handing off
+            if (ulong.TryParse(Context.Config.LobbyId, out ulong knifelobbyId))
+            {
+                string knifeWinner = (@event.Winner == (int)TeamSide.CounterTerrorist)
+                    ? (Context.Team1Side == TeamSide.CounterTerrorist ? "team1" : "team2")
+                    : (Context.Team1Side == TeamSide.Terrorist ? "team1" : "team2");
+
+                _ = _db.InsertMatchRoundAsync(new MatchRoundRow(
+                    knifelobbyId,
+                    0,
+                    knifeWinner,
+                    @event.Reason,
+                    Context.Config.Maplist[Context.CurrentMapIndex],
+                    0,
+                    0,
+                    "knife",
+                    Context.Team1Side == TeamSide.CounterTerrorist
+                ));
+            }
+
             _knifeManager.HandleRoundEnd(@event);
             return;
         }
@@ -511,6 +528,30 @@ public class MatchManager
         if (Context.Config.Cvars.TryGetValue("mp_maxrounds", out string? mrStr)
             && int.TryParse(mrStr, out int mr))
             maxRounds = mr;
+
+        // Write per-round row to match_rounds
+        if (ulong.TryParse(Context.Config.LobbyId, out ulong lobbyId))
+        {
+            string roundWinner = (@event.Winner == (int)TeamSide.CounterTerrorist)
+                ? (Context.Team1Side == TeamSide.CounterTerrorist ? "team1" : "team2")
+                : (Context.Team1Side == TeamSide.Terrorist ? "team1" : "team2");
+
+            string half = round <= maxRounds / 2 ? "first"
+                        : round <= maxRounds     ? "second"
+                                                 : "overtime";
+
+            _ = _db.InsertMatchRoundAsync(new MatchRoundRow(
+                lobbyId,
+                round,
+                roundWinner,
+                @event.Reason,
+                Context.Config.Maplist[Context.CurrentMapIndex],
+                Context.Team1Score,
+                Context.Team2Score,
+                half,
+                Context.Team1Side == TeamSide.CounterTerrorist
+            ));
+        }
 
         if (round == maxRounds / 2)
         {
@@ -594,6 +635,15 @@ public class MatchManager
             $"{{\"t1_maps\":{Context.MapWinsTeam1},\"t2_maps\":{Context.MapWinsTeam2}}}");
         _ = _db.FinishMatchAsync(closingMatchId, Context.Team1Score, Context.Team2Score);
         _ = _db.CloseScoreboardAsync(closingMatchId);
+
+        if (ulong.TryParse(Context.Config.LobbyId, out ulong lobbyId))
+        {
+            string mapName = Context.CurrentMapIndex < Context.Config.Maplist.Count
+                ? Context.Config.Maplist[Context.CurrentMapIndex]
+                : "unknown";
+            string demoName = $"{Context.Config.LobbyId}_{mapName}.dem";
+            _ = _db.FinishLobbyAsync(lobbyId, demoName);
+        }
 
         Context = null;
 

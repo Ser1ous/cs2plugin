@@ -18,4 +18,6 @@ public class PluginConfig : BasePluginConfig
 
     // Minimum players per team required to start (0 = use match config value)
     public int MinPlayersToStart { get; set; } = 0;
+
+
 }
