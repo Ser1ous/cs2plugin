@@ -85,6 +85,7 @@ public class PluginEventHandler
     public HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
     {
         var ctx = _matchManager.Context;
+        // Skip kill tracking during knife rounds — only record during Live state
         if (ctx?.State != MatchState.Live) return HookResult.Continue;
 
         var victim   = @event.Userid;
@@ -235,7 +236,7 @@ public class PluginEventHandler
         int round = _matchManager.GetCurrentRound();
         int cfgTeam = _matchManager.GetConfigTeamForPlayer(player.SteamID);
         string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
-        _matchManager.RecordGrenade(player.SteamID, player.PlayerName, cfgTeam, teamName, round);
+        _matchManager.RecordGrenade(player.SteamID, player.PlayerName, cfgTeam, teamName, round, @event.Weapon ?? "");
 
         return HookResult.Continue;
     }
@@ -253,6 +254,10 @@ public class PluginEventHandler
         string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
         _matchManager.RecordBombPlant(player.SteamID, player.PlayerName, cfgTeam, teamName, round);
 
+        _ = _db.LogRoundEventAsync(new RoundEventData(
+            ctx.Config.MatchId, round, "bomb_planted",
+            ctx.Team1Score, ctx.Team2Score, null));
+
         return HookResult.Continue;
     }
 
@@ -269,6 +274,68 @@ public class PluginEventHandler
         string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
         _matchManager.RecordBombDefuse(player.SteamID, player.PlayerName, cfgTeam, teamName, round);
 
+        int attempts = _matchManager.GetDefuseAttempts(player.SteamID);
+        float timeLeft = _matchManager.GetBombTimeLeft();
+        _ = _db.LogRoundEventAsync(new RoundEventData(
+            ctx.Config.MatchId, round, "bomb_defused",
+            ctx.Team1Score, ctx.Team2Score, null,
+            $"{{\"defuser\":\"{player.PlayerName}\",\"steam_id\":\"{player.SteamID}\"," +
+            $"\"attempts\":{attempts},\"time_left\":{timeLeft:F2}}}"));
+
+        return HookResult.Continue;
+    }
+
+    public HookResult OnBombBeginDefuse(EventBombBegindefuse @event, GameEventInfo info)
+    {
+        var ctx = _matchManager.Context;
+        if (ctx?.State != MatchState.Live) return HookResult.Continue;
+        var player = @event.Userid;
+        if (player == null || !player.IsValid) return HookResult.Continue;
+        _matchManager.RecordDefuseAttempt(player.SteamID);
+        return HookResult.Continue;
+    }
+
+    public HookResult OnBombExploded(EventBombExploded @event, GameEventInfo info)
+    {
+        var ctx = _matchManager.Context;
+        if (ctx?.State != MatchState.Live) return HookResult.Continue;
+
+        int round = _matchManager.GetCurrentRound();
+        int attempts = _matchManager.GetTotalDefuseAttempts();
+        _ = _db.LogRoundEventAsync(new RoundEventData(
+            ctx.Config.MatchId, round, "bomb_exploded",
+            ctx.Team1Score, ctx.Team2Score, null,
+            $"{{\"defuse_attempts\":{attempts}}}"));
+        return HookResult.Continue;
+    }
+
+    // -------------------------------------------------------------------------
+    // Shots fired / economy
+    // -------------------------------------------------------------------------
+
+    public HookResult OnWeaponFire(EventWeaponFire @event, GameEventInfo info)
+    {
+        var ctx = _matchManager.Context;
+        if (ctx?.State != MatchState.Live) return HookResult.Continue;
+        var player = @event.Userid;
+        if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+        int cfgTeam = _matchManager.GetConfigTeamForPlayer(player.SteamID);
+        string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
+        int round = _matchManager.GetCurrentRound();
+        _matchManager.RecordShotFired(player.SteamID, player.PlayerName, cfgTeam, teamName, round);
+        return HookResult.Continue;
+    }
+
+    public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
+    {
+        var ctx = _matchManager.Context;
+        if (ctx?.State != MatchState.Live) return HookResult.Continue;
+        var player = @event.Userid;
+        if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+        int cfgTeam = _matchManager.GetConfigTeamForPlayer(player.SteamID);
+        string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
+        int round = _matchManager.GetCurrentRound();
+        _matchManager.RecordPlayerSpawn(player.SteamID, player.PlayerName, cfgTeam, teamName, round);
         return HookResult.Continue;
     }
 
@@ -278,30 +345,28 @@ public class PluginEventHandler
 
     public HookResult OnOtherDeath(EventOtherDeath @event, GameEventInfo info)
     {
-        // Othertype is the entity classname of the victim
         if (!string.Equals(@event.Othertype, "chicken", StringComparison.OrdinalIgnoreCase))
             return HookResult.Continue;
 
         var ctx = _matchManager.Context;
-        if (ctx?.State != MatchState.Live) return HookResult.Continue;
+        // Allow during any active match state so chickens are always announced
+        if (ctx == null) return HookResult.Continue;
 
-        // Attacker is an entity index — resolve to a player controller
         var killer = Utilities.GetPlayerFromIndex(@event.Attacker);
         if (killer == null || !killer.IsValid || killer.IsBot) return HookResult.Continue;
 
         int round = _matchManager.GetCurrentRound();
         string weapon = string.IsNullOrEmpty(@event.Weapon) ? "unknown" : @event.Weapon;
 
-        _ = _db.LogChickenKillAsync(new ChickenKillData(
-            ctx.Config.MatchId,
-            round,
-            killer.SteamID,
-            killer.PlayerName,
-            killer.TeamNum,
-            weapon
-        ));
-
         BroadcastAll($" \x04[Match]\x01 \x02{killer.PlayerName}\x01 killed a chicken with \x09{weapon}\x01 (round \x09{round}\x01)");
+
+        if (ctx.State == MatchState.Live)
+        {
+            _ = _db.LogChickenKillAsync(new ChickenKillData(
+                ctx.Config.MatchId, round,
+                killer.SteamID, killer.PlayerName,
+                killer.TeamNum, weapon));
+        }
 
         return HookResult.Continue;
     }

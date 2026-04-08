@@ -107,6 +107,7 @@ public class DatabaseService
     team1_score INT NOT NULL DEFAULT 0,
     team2_score INT NOT NULL DEFAULT 0,
     winner_team TINYINT,
+    data        JSON,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_match_id (match_id)
 )",
@@ -413,14 +414,15 @@ VALUES (@mid, @round, @sid, @pname, @msg, @team)", conn);
         {
             await using var conn = await _dataSource.OpenConnectionAsync();
             await using var cmd = new MySqlCommand(@"
-INSERT INTO round_events (match_id, round, event_type, team1_score, team2_score, winner_team)
-VALUES (@mid, @round, @et, @t1, @t2, @winner)", conn);
+INSERT INTO round_events (match_id, round, event_type, team1_score, team2_score, winner_team, data)
+VALUES (@mid, @round, @et, @t1, @t2, @winner, @data)", conn);
             cmd.Parameters.AddWithValue("@mid",    d.MatchId);
             cmd.Parameters.AddWithValue("@round",  d.Round);
             cmd.Parameters.AddWithValue("@et",     d.EventType);
             cmd.Parameters.AddWithValue("@t1",     d.Team1Score);
             cmd.Parameters.AddWithValue("@t2",     d.Team2Score);
             cmd.Parameters.AddWithValue("@winner", (object?)d.WinnerTeam ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@data",   (object?)d.JsonData ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB LogRoundEvent: {ex.Message}"); }
@@ -494,26 +496,26 @@ ON DUPLICATE KEY UPDATE
             cmd.Parameters.AddWithValue("@k2",   r.Kills2k);
             cmd.Parameters.AddWithValue("@uc",   r.UtilityCount);
             cmd.Parameters.AddWithValue("@udmg", r.UtilDamage);
-            cmd.Parameters.AddWithValue("@us",   0);
-            cmd.Parameters.AddWithValue("@ue",   0);
+            cmd.Parameters.AddWithValue("@us",   r.UtilSuccesses);
+            cmd.Parameters.AddWithValue("@ue",   r.UtilEnemiesHit);
             cmd.Parameters.AddWithValue("@fc",   r.FlashCount);
             cmd.Parameters.AddWithValue("@fs",   r.FlashSuccesses);
             cmd.Parameters.AddWithValue("@hprem",r.DamageDealt);
             cmd.Parameters.AddWithValue("@hpdlt",r.DamageDealt);
-            cmd.Parameters.AddWithValue("@sf",   0);
-            cmd.Parameters.AddWithValue("@sot",  0);
-            cmd.Parameters.AddWithValue("@v1c",  0);
-            cmd.Parameters.AddWithValue("@v1w",  0);
-            cmd.Parameters.AddWithValue("@v2c",  0);
-            cmd.Parameters.AddWithValue("@v2w",  0);
-            cmd.Parameters.AddWithValue("@enc",  0);
-            cmd.Parameters.AddWithValue("@enw",  0);
-            cmd.Parameters.AddWithValue("@eqv",  0);
-            cmd.Parameters.AddWithValue("@ms",   0);
-            cmd.Parameters.AddWithValue("@kr",   0);
-            cmd.Parameters.AddWithValue("@lt",   0);
+            cmd.Parameters.AddWithValue("@sf",   r.ShotsFired);
+            cmd.Parameters.AddWithValue("@sot",  r.ShotsOnTarget);
+            cmd.Parameters.AddWithValue("@v1c",  r.V1Count);
+            cmd.Parameters.AddWithValue("@v1w",  r.V1Wins);
+            cmd.Parameters.AddWithValue("@v2c",  r.V2Count);
+            cmd.Parameters.AddWithValue("@v2w",  r.V2Wins);
+            cmd.Parameters.AddWithValue("@enc",  r.EntryCount);
+            cmd.Parameters.AddWithValue("@enw",  r.EntryWins);
+            cmd.Parameters.AddWithValue("@eqv",  r.EquipmentValue);
+            cmd.Parameters.AddWithValue("@ms",   r.MoneySaved);
+            cmd.Parameters.AddWithValue("@kr",   r.KillReward);
+            cmd.Parameters.AddWithValue("@lt",   r.LiveTime);
             cmd.Parameters.AddWithValue("@hsk",  r.Headshots);
-            cmd.Parameters.AddWithValue("@ce",   0);
+            cmd.Parameters.AddWithValue("@ce",   r.CashEarned);
             cmd.Parameters.AddWithValue("@ef",   r.EnemiesFlashed);
             cmd.Parameters.AddWithValue("@bp",   r.BombPlants);
             cmd.Parameters.AddWithValue("@bd",   r.BombDefuses);
@@ -711,7 +713,8 @@ public record RoundEventData(
     string EventType,
     int Team1Score,
     int Team2Score,
-    int? WinnerTeam
+    int? WinnerTeam,
+    string? JsonData = null
 );
 
 public record ScoreboardRow(
@@ -720,22 +723,45 @@ public record ScoreboardRow(
     string? PlayerName,
     int ConfigTeam,
     string? TeamName,
+    // Core
     int Kills,
     int Deaths,
     int DamageDealt,
     int Assists,
+    // Multi-kills
     int Kills5k,
     int Kills4k,
     int Kills3k,
     int Kills2k,
-    int UtilityCount,
+    // Utility
+    int UtilityCount,   // total grenades thrown
     int UtilDamage,
+    int UtilSuccesses,  // util grenades that hit ≥1 enemy
+    int UtilEnemiesHit, // total enemies hit by util
+    // Flash
     int FlashCount,
     int FlashSuccesses,
+    // Shots
+    int ShotsFired,
+    int ShotsOnTarget,
+    // Clutch
+    int V1Count, int V1Wins,
+    int V2Count, int V2Wins,
+    // Entry
+    int EntryCount, int EntryWins,
+    // Economy
+    int EquipmentValue,
+    int MoneySaved,
+    int KillReward,
+    int LiveTime,       // seconds alive (int)
+    // Kill quality
     int Headshots,
+    int CashEarned,
     int EnemiesFlashed,
+    // Bomb
     int BombPlants,
     int BombDefuses,
+    // Tracking
     int RoundsPlayed,
     int LastRound
 );

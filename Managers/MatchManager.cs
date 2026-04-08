@@ -522,8 +522,10 @@ public class MatchManager
         if (Context.State == MatchState.Knife)
         {
             // Insert knife round as round 0 before handing off
-            if (ulong.TryParse(Context.Config.LobbyId, out ulong knifelobbyId))
+            Console.WriteLine($"[CS2Match] Knife OnRoundEnd: MatchId={Context.Config.MatchId} LobbyId={Context.Config.LobbyId}");
+            if (ulong.TryParse(Context.Config.MatchId, out ulong knifelobbyId))
             {
+                Console.WriteLine($"[CS2Match] Inserting knife round 0 for lobby {knifelobbyId}");
                 string knifeWinner = (@event.Winner == (int)TeamSide.CounterTerrorist)
                     ? (Context.Team1Side == TeamSide.CounterTerrorist ? "team1" : "team2")
                     : (Context.Team1Side == TeamSide.Terrorist ? "team1" : "team2");
@@ -567,6 +569,21 @@ public class MatchManager
             Context.Team1Score, Context.Team2Score, "live",
             Context.Config.Maplist[Context.CurrentMapIndex], Context.CurrentMapIndex + 1);
 
+        // Accumulate live time for alive players before the round ends
+        float now = CounterStrikeSharp.API.Server.CurrentTime;
+        foreach (var stats in Context.PlayerStats.Values)
+        {
+            if (stats.RoundSpawnTime > 0f)
+            {
+                stats.LiveTimeSeconds += now - stats.RoundSpawnTime;
+                stats.RoundSpawnTime = 0f;
+            }
+        }
+        // Reset per-round bomb tracking
+        Context.BombPlantTime = 0f;
+        Context.DefuseAttempts.Clear();
+        Context.ActiveDefuser = 0;
+
         // Categorise this round's multi-kills before flushing (resets RoundKills)
         ProcessRoundMultiKills();
 
@@ -580,8 +597,10 @@ public class MatchManager
             maxRounds = mr;
 
         // Write per-round row to match_rounds and per-player row to match_round_players
-        if (ulong.TryParse(Context.Config.LobbyId, out ulong lobbyId))
+        Console.WriteLine($"[CS2Match] Live OnRoundEnd round={round}: MatchId={Context.Config.MatchId} LobbyId={Context.Config.LobbyId}");
+        if (ulong.TryParse(Context.Config.MatchId, out ulong lobbyId))
         {
+            Console.WriteLine($"[CS2Match] Inserting round {round} data for lobby {lobbyId}");
             FlushRoundPlayers(round, lobbyId);
             string roundWinner = (@event.Winner == (int)TeamSide.CounterTerrorist)
                 ? (Context.Team1Side == TeamSide.CounterTerrorist ? "team1" : "team2")
@@ -687,13 +706,19 @@ public class MatchManager
         _ = _db.FinishMatchAsync(closingMatchId, Context.Team1Score, Context.Team2Score);
         _ = _db.CloseScoreboardAsync(closingMatchId);
 
-        if (ulong.TryParse(Context.Config.LobbyId, out ulong lobbyId))
+        Console.WriteLine($"[CS2Match] EndMatch: MatchId={Context.Config.MatchId} LobbyId={Context.Config.LobbyId}");
+        if (ulong.TryParse(Context.Config.MatchId, out ulong lobbyId))
         {
             string mapName = Context.CurrentMapIndex < Context.Config.Maplist.Count
                 ? Context.Config.Maplist[Context.CurrentMapIndex]
                 : "unknown";
-            string demoName = $"{Context.Config.LobbyId}_{mapName}.dem";
+            string demoName = $"{Context.Config.MatchId}_{mapName}.dem";
+            Console.WriteLine($"[CS2Match] Finishing lobby {lobbyId} with demo {demoName}");
             _ = _db.FinishLobbyAsync(lobbyId, demoName);
+        }
+        else
+        {
+            Console.WriteLine($"[CS2Match] WARNING: Could not parse MatchId '{Context.Config.MatchId}' as ulong — lobby not updated");
         }
 
         Context = null;
@@ -800,22 +825,45 @@ public class MatchManager
                 stats.PlayerName,
                 stats.ConfigTeam,
                 stats.TeamName,
+                // Core
                 stats.Kills,
                 stats.Deaths,
                 stats.DamageDealt,
                 stats.Assists,
+                // Multi-kills
                 stats.Kills5k,
                 stats.Kills4k,
                 stats.Kills3k,
                 stats.Kills2k,
+                // Utility
                 stats.GrenadesThrown,
                 stats.UtilDamage,
-                stats.FlashAssists, // flash_count approximated by flash assists
-                stats.FlashAssists,
+                stats.UtilSuccesses,
+                stats.UtilEnemiesHit,
+                // Flash
+                stats.FlashCount,
+                stats.FlashSuccesses,
+                // Shots
+                stats.ShotsFired,
+                stats.ShotsOnTarget,
+                // Clutch
+                stats.V1Count, stats.V1Wins,
+                stats.V2Count, stats.V2Wins,
+                // Entry
+                stats.EntryCount, stats.EntryWins,
+                // Economy
+                stats.EquipmentValue,
+                stats.MoneyRemaining,   // money_saved = money left after buying
+                stats.KillReward,
+                (int)stats.LiveTimeSeconds,
+                // Kill quality
                 stats.Headshots,
+                stats.CashEarned,
                 stats.EnemiesFlashed,
+                // Bomb
                 stats.BombPlants,
                 stats.BombDefuses,
+                // Tracking
                 stats.RoundsPlayed,
                 round
             ));
@@ -863,6 +911,7 @@ public class MatchManager
             stats.RoundDamageDealt = 0;
             stats.RoundHeadshots   = 0;
             stats.RoundAssists     = 0;
+            stats.RoundGotEntry    = false;
         }
         if (rows.Count > 0)
             _ = _db.InsertRoundPlayersAsync(rows);
@@ -943,9 +992,12 @@ public class MatchManager
             {
                 aStats.DamageDealt      += dmgHealth;
                 aStats.RoundDamageDealt += dmgHealth;
-                aStats.ArmorDamage += dmgArmor;
+                aStats.ArmorDamage      += dmgArmor;
                 if (isHe)   aStats.HeDamageDealt += dmgHealth;
-                if (isUtil) aStats.UtilDamage    += dmgHealth;
+                if (isUtil) { aStats.UtilDamage += dmgHealth; aStats.UtilEnemiesHit++; }
+                // Each player_hurt from a bullet = one shot that connected
+                bool isBullet = !isHe && !isUtil && !weapon.Contains("knife", StringComparison.OrdinalIgnoreCase);
+                if (isBullet) aStats.ShotsOnTarget++;
             }
             aStats.RoundsPlayed = round;
         }
@@ -973,14 +1025,17 @@ public class MatchManager
         var stats = GetOrCreateStats(flasherSteamId, flasherName, flasherConfigTeam, flasherTeamName);
         stats.EnemiesFlashed++;
         stats.TotalFlashDuration += duration;
+        stats.FlashSuccesses++;  // this enemy was blinded — at least 1 success for this throw
         stats.RoundsPlayed = round;
     }
 
-    public void RecordGrenade(ulong steamId, string playerName, int configTeam, string teamName, int round)
+    public void RecordGrenade(ulong steamId, string playerName, int configTeam, string teamName, int round, string weapon)
     {
         if (Context?.State != MatchState.Live) return;
         var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
         stats.GrenadesThrown++;
+        bool isFlash = weapon.Contains("flashbang", StringComparison.OrdinalIgnoreCase);
+        if (isFlash) stats.FlashCount++;
         stats.RoundsPlayed = round;
     }
 
@@ -990,6 +1045,17 @@ public class MatchManager
         var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
         stats.BombPlants++;
         stats.RoundsPlayed = round;
+        // Track plant time so GetBombTimeLeft() can compute remaining time
+        Context.BombPlantTime = CounterStrikeSharp.API.Server.CurrentTime;
+        // Read mp_c4timer cvar if available
+        if (Context.Config.Cvars.TryGetValue("mp_c4timer", out string? timerStr)
+            && float.TryParse(timerStr, out float t))
+            Context.BombTimerLength = t;
+        else
+            Context.BombTimerLength = 40f;
+        // Reset defuse attempts for this round
+        Context.DefuseAttempts.Clear();
+        Context.ActiveDefuser = 0;
     }
 
     public void RecordBombDefuse(ulong steamId, string playerName, int configTeam, string teamName, int round)
@@ -997,6 +1063,63 @@ public class MatchManager
         if (Context?.State != MatchState.Live) return;
         var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
         stats.BombDefuses++;
+        stats.RoundsPlayed = round;
+        Context.ActiveDefuser = 0;
+    }
+
+    public void RecordDefuseAttempt(ulong steamId)
+    {
+        if (Context?.State != MatchState.Live) return;
+        Context.ActiveDefuser = steamId;
+        if (!Context.DefuseAttempts.ContainsKey(steamId))
+            Context.DefuseAttempts[steamId] = 0;
+        Context.DefuseAttempts[steamId]++;
+        if (Context.PlayerStats.TryGetValue(steamId, out var stats))
+            stats.DefuseAttempts++;
+    }
+
+    public int GetDefuseAttempts(ulong steamId)
+    {
+        if (Context == null) return 0;
+        return Context.DefuseAttempts.TryGetValue(steamId, out int n) ? n : 0;
+    }
+
+    public int GetTotalDefuseAttempts()
+    {
+        if (Context == null) return 0;
+        int total = 0;
+        foreach (var v in Context.DefuseAttempts.Values) total += v;
+        return total;
+    }
+
+    public float GetBombTimeLeft()
+    {
+        if (Context == null || Context.BombPlantTime <= 0f) return 0f;
+        float elapsed = CounterStrikeSharp.API.Server.CurrentTime - Context.BombPlantTime;
+        float remaining = Context.BombTimerLength - elapsed;
+        return remaining < 0f ? 0f : remaining;
+    }
+
+    public void RecordShotFired(ulong steamId, string playerName, int configTeam, string teamName, int round)
+    {
+        if (Context?.State != MatchState.Live) return;
+        var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
+        stats.ShotsFired++;
+        stats.RoundsPlayed = round;
+    }
+
+    public void RecordShotOnTarget(ulong steamId)
+    {
+        if (Context?.State != MatchState.Live) return;
+        if (Context.PlayerStats.TryGetValue(steamId, out var stats))
+            stats.ShotsOnTarget++;
+    }
+
+    public void RecordPlayerSpawn(ulong steamId, string playerName, int configTeam, string teamName, int round)
+    {
+        if (Context?.State != MatchState.Live) return;
+        var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
+        stats.RoundSpawnTime = CounterStrikeSharp.API.Server.CurrentTime;
         stats.RoundsPlayed = round;
     }
 

@@ -8,55 +8,52 @@ public class MatchContext
     public MatchState State { get; set; } = MatchState.None;
     public MatchState StateBeforePause { get; set; } = MatchState.None;
 
-    /// <summary>
-    /// True when we are waiting for the correct map to finish loading.
-    /// EnterWarmup will be called on the first RoundStart after the map is active.
-    /// </summary>
     public bool PendingWarmup { get; set; } = false;
-
     public int CurrentMapIndex { get; set; } = 0;
 
-    // SteamID64s that typed !ready during warmup
     public HashSet<ulong> ReadyPlayers { get; set; } = new();
 
-    // Which CS team (by TeamNum int) won the knife round
     public TeamSide KnifeWinnerCsTeam { get; set; } = TeamSide.None;
-
-    // Which config team number won knife (1 or 2), 0 = unknown
     public int KnifeWinnerConfigTeam { get; set; } = 0;
 
-    // Unpause votes tracked by steamid
     public HashSet<ulong> UnpauseVotes { get; set; } = new();
     public bool Team1UnpauseVoted { get; set; } = false;
     public bool Team2UnpauseVoted { get; set; } = false;
 
-    // Running scores for current map
     public int Team1Score { get; set; } = 0;
     public int Team2Score { get; set; } = 0;
-
-    // Series wins
     public int MapWinsTeam1 { get; set; } = 0;
     public int MapWinsTeam2 { get; set; } = 0;
 
-    // Side assignments after knife: TeamSide.CT or TeamSide.T
     public TeamSide Team1Side { get; set; } = TeamSide.None;
     public TeamSide Team2Side { get; set; } = TeamSide.None;
 
     // Per-player live stats — key is SteamID64
     public Dictionary<ulong, PlayerStats> PlayerStats { get; set; } = new();
+
+    // Bomb defuse tracking: steamId → defuse attempt count this round (reset each round)
+    public Dictionary<ulong, int> DefuseAttempts { get; set; } = new();
+
+    // Which player is currently defusing (steamId), or 0 if none
+    public ulong ActiveDefuser { get; set; } = 0;
+
+    // Server time when bomb was planted this round (0 = not planted)
+    public float BombPlantTime { get; set; } = 0f;
+    // mp_c4timer value (seconds); default 40
+    public float BombTimerLength { get; set; } = 40f;
 }
 
 public class PlayerStats
 {
     public string PlayerName { get; set; } = "";
-    public int ConfigTeam    { get; set; }  // 1 or 2
+    public int ConfigTeam    { get; set; }
     public string TeamName   { get; set; } = "";
 
     // --- Core (cumulative) ---
-    public int Kills         { get; set; }
-    public int Deaths        { get; set; }
-    public int Assists       { get; set; }
-    public int Headshots     { get; set; }
+    public int Kills    { get; set; }
+    public int Deaths   { get; set; }
+    public int Assists  { get; set; }
+    public int Headshots { get; set; }
 
     // --- Multi-kills (cumulative) ---
     public int Kills5k { get; set; }
@@ -69,27 +66,58 @@ public class PlayerStats
     public int DamageTaken   { get; set; }
     public int HeDamageDealt { get; set; }
     public int HeDamageTaken { get; set; }
-    public int UtilDamage    { get; set; }
+    public int UtilDamage    { get; set; }   // molotov/incendiary
     public int ArmorDamage   { get; set; }
+
+    // --- Shots ---
+    public int ShotsFired    { get; set; }   // weapon_fire events
+    public int ShotsOnTarget { get; set; }   // player_hurt events (each hit = 1 shot on target)
 
     // --- Flash ---
     public int EnemiesFlashed       { get; set; }
     public float TotalFlashDuration { get; set; }
     public int FlashAssists         { get; set; }
+    public int FlashCount           { get; set; }   // flashbangs thrown
+    public int FlashSuccesses       { get; set; }   // flashes that blinded ≥1 enemy
 
     // --- Utility ---
-    public int GrenadesThrown { get; set; }
+    public int GrenadesThrown   { get; set; }
+    public int UtilSuccesses    { get; set; }  // util grenades that damaged ≥1 enemy
+    public int UtilEnemiesHit   { get; set; }  // total enemies hit by util grenades
+
+    // --- Economy ---
+    public int EquipmentValue   { get; set; }  // value at round start (from player_spawn/freeze end)
+    public int MoneySpent       { get; set; }  // money spent buying this round
+    public int MoneyRemaining   { get; set; }  // money left after buying (= money_saved)
+    public int KillReward       { get; set; }  // cash earned from kills this round (cumulative)
+    public int CashEarned       { get; set; }  // total cash earned this match
+
+    // --- Time alive ---
+    public float LiveTimeSeconds { get; set; }  // total seconds alive across all rounds
+    public float RoundSpawnTime  { get; set; }  // Server time when spawned this round (0 = not alive)
+
+    // --- Clutch tracking ---
+    public int V1Count { get; set; }  // times entered 1v1
+    public int V1Wins  { get; set; }
+    public int V2Count { get; set; }  // times entered 1v2
+    public int V2Wins  { get; set; }
+
+    // --- Entry frag ---
+    public int EntryCount { get; set; }  // rounds where player got the first kill
+    public int EntryWins  { get; set; }  // of those, rounds the team won
 
     // --- Bomb ---
     public int BombPlants  { get; set; }
     public int BombDefuses { get; set; }
+    public int DefuseAttempts { get; set; }  // times started defusing (includes failed)
 
-    // --- Per-round counters (reset at each round end) ---
+    // --- Per-round counters (reset at each round end after flush) ---
     public int RoundKills       { get; set; }
     public int RoundDeaths      { get; set; }
     public int RoundDamageDealt { get; set; }
     public int RoundHeadshots   { get; set; }
     public int RoundAssists     { get; set; }
+    public bool RoundGotEntry   { get; set; }  // got first kill this round
 
     // --- Tracking ---
     public int RoundsPlayed { get; set; }
