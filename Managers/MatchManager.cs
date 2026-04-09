@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CS2MatchPlugin.Config;
 using CS2MatchPlugin.Services;
 using CS2MatchPlugin.State;
@@ -150,6 +151,10 @@ public class MatchManager
         // Reset sides to default for new map — knife round will reassign them
         Context.Team1Side = TeamSide.Terrorist;
         Context.Team2Side = TeamSide.CounterTerrorist;
+
+        // Capture timestamp now — tv_autorecord names the demo file using the
+        // time the map loaded, not the time the match goes live.
+        Context.DemoTimestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmm");
 
         // Mark warmup as pending — actual setup runs on first RoundStart
         Context.PendingWarmup = true;
@@ -498,6 +503,16 @@ public class MatchManager
         string matchId = Context.Config.MatchId;
         string map = Context.Config.Maplist[Context.CurrentMapIndex];
         int mapIdx = Context.CurrentMapIndex + 1;
+
+        // Build the demo filename using CS2's auto-record format:
+        // auto-YYYYMMDD-HHMM-{map}-{hostname}.dem
+        // Timestamp is from map load, matching when tv_autorecord actually started.
+        string timestamp = Context.DemoTimestamp;
+        string hostname  = ConVar.Find("hostname")?.StringValue ?? "server";
+        // Sanitise hostname: strip characters that CS2 replaces with underscores
+        hostname = System.Text.RegularExpressions.Regex.Replace(hostname, @"[^\w\-]", "_");
+        Context.DemoName = $"auto-{timestamp}-{map}-{hostname}.dem";
+
         _ = _db.LogMatchEventAsync(matchId, "match_live", $"{{\"map\":\"{map}\"}}");
         _ = _db.UpdateMatchAsync(matchId, 0, 0, "live", map, mapIdx);
     }
@@ -739,10 +754,7 @@ public class MatchManager
         Console.WriteLine($"[CS2Match] EndMatch: MatchId={Context.Config.MatchId} LobbyId={Context.Config.LobbyId}");
         if (ulong.TryParse(Context.Config.MatchId, out ulong lobbyId))
         {
-            string mapName = Context.CurrentMapIndex < Context.Config.Maplist.Count
-                ? Context.Config.Maplist[Context.CurrentMapIndex]
-                : "unknown";
-            string demoName = $"{Context.Config.MatchId}_{mapName}.dem";
+            string demoName = Context.DemoName;
             Console.WriteLine($"[CS2Match] Finishing lobby {lobbyId} with demo {demoName}");
             _ = _db.FinishLobbyAsync(lobbyId, demoName);
         }
