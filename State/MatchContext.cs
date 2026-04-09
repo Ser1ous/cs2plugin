@@ -67,6 +67,11 @@ public class MatchContext
     // Flash success: tracks which players already scored a flash hit this round
     // (prevents counting each blinded enemy as a separate flash success)
     public HashSet<ulong> RoundFlashSucceeded { get; set; } = new();
+
+    // Per-player HP tracking — set to 100 on spawn, decremented on every player_hurt.
+    // Used to compute actual health lost (caps overkill damage correctly for stats).
+    // Updated for ALL damage (FF and enemy) so enemy stats stay accurate after FF hits.
+    public Dictionary<ulong, int> PlayerCurrentHp { get; set; } = new();
 }
 
 public class PlayerStats

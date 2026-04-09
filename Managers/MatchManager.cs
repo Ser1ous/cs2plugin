@@ -687,10 +687,48 @@ public class MatchManager
 
         if (!t1 && !t2) return;
 
-        if (t1) Context.MapWinsTeam1++;
-        else    Context.MapWinsTeam2++;
+        // Overtime: both teams reached the regulation win threshold — the map
+        // is tied going into overtime. Let CS2 run overtime as configured
+        // (mp_overtime_enable, mp_overtime_maxrounds). Only declare a winner
+        // once one team leads by more than 1 round past the regulation threshold,
+        // meaning they actually won an overtime half.
+        if (t1 && t2)
+        {
+            // Tied at regulation end — CS2 will start overtime automatically.
+            // Reset to no-win state and let overtime play out.
+            return;
+        }
 
-        string winner = t1 ? Context.Config.Team1.Name : Context.Config.Team2.Name;
+        // In overtime, scores exceed toWin. Only trigger map win when the score
+        // gap is decisive (i.e. one team is strictly ahead and the other can no
+        // longer catch up within the current overtime period). CS2's own
+        // mp_match_can_clinch handles this — just trust EventCsWinPanelMatch.
+        // Guard: skip if we are past regulation (scores sum exceeds maxRounds).
+        if (Context.Team1Score + Context.Team2Score > maxRounds) return;
+
+        // Regulation win detected — do nothing here; OnMapWin() via
+        // EventCsWinPanelMatch is the single authority for map-end logic.
+        // This guard just prevents the round-end loop from running into overtime.
+    }
+
+    /// <summary>
+    /// Called from EventCsWinPanelMatch — CS2 has definitively ended the map
+    /// (covers regulation AND overtime). Credit the map win and advance the series.
+    /// </summary>
+    public void OnMapWin()
+    {
+        if (Context?.State != MatchState.Live) return;
+
+        bool t1 = Context.Team1Score > Context.Team2Score;
+        bool t2 = Context.Team2Score > Context.Team1Score;
+
+        if (t1) Context.MapWinsTeam1++;
+        else if (t2) Context.MapWinsTeam2++;
+        // exact tie (draw) — no map win credited
+
+        string winner = t1 ? Context.Config.Team1.Name
+                      : t2 ? Context.Config.Team2.Name
+                           : "Draw";
         BroadcastAll($" \x04[Match]\x01 {winner} wins the map! Series: {Context.MapWinsTeam1}-{Context.MapWinsTeam2}");
 
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "map_end",
@@ -1077,8 +1115,30 @@ public class MatchManager
     {
         if (Context?.State != MatchState.Live) return;
 
+        // Compute actual health lost using per-player HP tracking.
+        // dmgHealth is raw weapon damage and can exceed remaining HP (overkill).
+        // We track HP ourselves because player_hurt fires post-damage and
+        // event.Health is clamped to 0 on kill shots, making pre-HP unrecoverable
+        // from the event alone.
+        // HP is updated for ALL damage (FF and enemy) so that a FF hit followed
+        // by an enemy hit still produces the correct actual-damage for the enemy.
+        int actualDmgHealth;
+        if (Context.PlayerCurrentHp.TryGetValue(victimSteamId, out int trackedHp))
+        {
+            actualDmgHealth = Math.Min(dmgHealth, trackedHp);
+            Context.PlayerCurrentHp[victimSteamId] = Math.Max(0, trackedHp - dmgHealth);
+        }
+        else
+        {
+            // Fallback: player spawned before tracking was seeded (e.g. hot-reload).
+            actualDmgHealth = Math.Min(dmgHealth, 100);
+        }
+
         bool enemyDamage = attackerConfigTeam != 0 && victimConfigTeam != 0
                         && attackerConfigTeam != victimConfigTeam;
+
+        // Friendly fire: HP tracking updated above, but stats are not recorded.
+        if (!enemyDamage) return;
 
         bool isHe   = weapon.Contains("hegrenade",    StringComparison.OrdinalIgnoreCase);
         bool isUtil = weapon.Contains("molotov",       StringComparison.OrdinalIgnoreCase) ||
@@ -1088,33 +1148,27 @@ public class MatchManager
         if (attackerSteamId != 0 && attackerSteamId != victimSteamId)
         {
             var aStats = GetOrCreateStats(attackerSteamId, attackerName, attackerConfigTeam, attackerTeamName);
-            if (enemyDamage)
+            aStats.DamageDealt      += actualDmgHealth;
+            aStats.RoundDamageDealt += actualDmgHealth;
+            aStats.ArmorDamage      += dmgArmor;
+            if (isHe) aStats.HeDamageDealt += actualDmgHealth;
+            if (isUtil)
             {
-                aStats.DamageDealt      += dmgHealth;
-                aStats.RoundDamageDealt += dmgHealth;
-                aStats.ArmorDamage      += dmgArmor;
-                if (isHe)   aStats.HeDamageDealt += dmgHealth;
-                if (isUtil)
-                {
-                    aStats.UtilDamage += dmgHealth;
-                    aStats.UtilEnemiesHit++;
-                    // Count a util success only once per throw per round
-                    if (Context.RoundUtilSucceeded.Add(attackerSteamId))
-                        aStats.UtilSuccesses++;
-                }
-                // Each player_hurt from a bullet = one shot that connected
-                bool isBullet = !isHe && !isUtil && !weapon.Contains("knife", StringComparison.OrdinalIgnoreCase);
-                if (isBullet) aStats.ShotsOnTarget++;
+                aStats.UtilDamage += actualDmgHealth;
+                aStats.UtilEnemiesHit++;
+                // Count a util success only once per throw per round
+                if (Context.RoundUtilSucceeded.Add(attackerSteamId))
+                    aStats.UtilSuccesses++;
             }
+            // Each player_hurt from a bullet = one shot that connected
+            bool isBullet = !isHe && !isUtil && !weapon.Contains("knife", StringComparison.OrdinalIgnoreCase);
+            if (isBullet) aStats.ShotsOnTarget++;
             aStats.RoundsPlayed = round;
         }
 
         var vStats = GetOrCreateStats(victimSteamId, victimName, victimConfigTeam, victimTeamName);
-        if (enemyDamage)
-        {
-            vStats.DamageTaken += dmgHealth;
-            if (isHe) vStats.HeDamageTaken += dmgHealth;
-        }
+        vStats.DamageTaken += actualDmgHealth;
+        if (isHe) vStats.HeDamageTaken += actualDmgHealth;
         vStats.RoundsPlayed = round;
     }
 
@@ -1243,6 +1297,9 @@ public class MatchManager
         // Track alive sets for clutch detection
         if (configTeam == 1) Context.AliveTeam1.Add(steamId);
         else if (configTeam == 2) Context.AliveTeam2.Add(steamId);
+
+        // Seed HP tracking — every player starts each round at 100 HP
+        Context.PlayerCurrentHp[steamId] = 100;
     }
 
     /// <summary>
@@ -1322,6 +1379,7 @@ public class MatchManager
         Context.AliveTeam2.Clear();
         Context.RoundUtilSucceeded.Clear();
         Context.RoundFlashSucceeded.Clear();
+        Context.PlayerCurrentHp.Clear();
     }
 
     public bool AreSameConfigTeam(ulong steamId1, ulong steamId2)

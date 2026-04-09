@@ -193,19 +193,33 @@ public class PluginEventHandler
         int vCfgTeam  = _matchManager.GetConfigTeamForPlayer(victim.SteamID);
         string vTeamName = _matchManager.GetTeamNameForConfigTeam(vCfgTeam);
 
+        // Friendly fire: notify both parties but skip stat recording entirely.
+        // RecordDamage still needs to be called to keep HP tracking accurate
+        // (a FF hit reduces victim's tracked HP, so the next enemy hit caps correctly).
+        if (aCfgTeam != 0 && aCfgTeam == vCfgTeam)
+        {
+            if (@event.DmgHealth > 0)
+            {
+                // Show actual HP lost, not raw overkill damage, for accurate feedback.
+                int ffActual = Math.Min(@event.DmgHealth, victim.PlayerPawn?.Value?.Health + @event.DmgHealth ?? @event.DmgHealth);
+                attacker.PrintToChat(
+                    $" \x07[FF]\x01 You dealt \x02{ffActual}\x01 damage to \x09{victim.PlayerName}\x01 with \x0B{weapon}\x01");
+                victim.PrintToChat(
+                    $" \x07[FF]\x01 \x09{attacker.PlayerName}\x01 dealt \x02{ffActual}\x01 damage to you with \x0B{weapon}\x01");
+            }
+            // RecordDamage with FF: updates HP tracking but skips stats (enemyDamage=false).
+            _matchManager.RecordDamage(
+                attacker.SteamID, attacker.PlayerName, aCfgTeam, aTeamName,
+                victim.SteamID,   victim.PlayerName,   vCfgTeam, vTeamName,
+                weapon, @event.DmgHealth, @event.DmgArmor, round);
+            return HookResult.Continue;
+        }
+
+        // Enemy damage — pass raw DmgHealth; RecordDamage caps via HP tracking.
         _matchManager.RecordDamage(
             attacker.SteamID, attacker.PlayerName, aCfgTeam, aTeamName,
             victim.SteamID,   victim.PlayerName,   vCfgTeam, vTeamName,
             weapon, @event.DmgHealth, @event.DmgArmor, round);
-
-        // Faceit-style friendly fire notification: notify both parties
-        if (aCfgTeam != 0 && aCfgTeam == vCfgTeam && @event.DmgHealth > 0)
-        {
-            attacker.PrintToChat(
-                $" \x07[FF]\x01 You dealt \x02{@event.DmgHealth}\x01 damage to \x09{victim.PlayerName}\x01 with \x0B{weapon}\x01");
-            victim.PrintToChat(
-                $" \x07[FF]\x01 \x09{attacker.PlayerName}\x01 dealt \x02{@event.DmgHealth}\x01 damage to you with \x0B{weapon}\x01");
-        }
 
         return HookResult.Continue;
     }
@@ -341,6 +355,31 @@ public class PluginEventHandler
         if (ctx?.State != MatchState.Live) return HookResult.Continue;
         var player = @event.Userid;
         if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+
+        // Auto-correct if CS2's auto-join or timer placed player on wrong side.
+        // Only enforce once sides are assigned (post-knife: Team1Side != None).
+        if (ctx.Team1Side != TeamSide.None)
+        {
+            string sid = player.SteamID.ToString();
+            bool isConfigTeam1 = ctx.Config.Team1.Players.ContainsKey(sid);
+            bool isConfigTeam2 = ctx.Config.Team2.Players.ContainsKey(sid);
+
+            if (isConfigTeam1 || isConfigTeam2)
+            {
+                TeamSide assignedSide = isConfigTeam1 ? ctx.Team1Side : ctx.Team2Side;
+                int expectedTeamNum = (int)assignedSide;
+
+                if (player.TeamNum != expectedTeamNum)
+                {
+                    var correctTeam = (CounterStrikeSharp.API.Modules.Utils.CsTeam)expectedTeamNum;
+                    player.SwitchTeam(correctTeam);
+                    string sideStr = expectedTeamNum == (int)TeamSide.CounterTerrorist ? "CT" : "T";
+                    string configTeamName = isConfigTeam1 ? ctx.Config.Team1.Name : ctx.Config.Team2.Name;
+                    player.PrintToChat($" \x04[Match]\x01 Auto-moved to correct side: \x09{configTeamName}\x01 plays \x09{sideStr}\x01.");
+                }
+            }
+        }
+
         int cfgTeam = _matchManager.GetConfigTeamForPlayer(player.SteamID);
         string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
         int round = _matchManager.GetCurrentRound();
@@ -530,8 +569,11 @@ public class PluginEventHandler
     public HookResult OnCsWinPanelMatch(EventCsWinPanelMatch @event, GameEventInfo info)
     {
         var ctx = _matchManager.Context;
-        if (ctx != null)
-            _ = _db.LogMatchEventAsync(ctx.Config.MatchId, "win_panel_shown");
+        if (ctx == null) return HookResult.Continue;
+        _ = _db.LogMatchEventAsync(ctx.Config.MatchId, "win_panel_shown");
+        // CS2 fired the win panel — the map is definitively over (including overtime).
+        // Trigger map win now so overtime endings are handled correctly.
+        _matchManager.OnMapWin();
         return HookResult.Continue;
     }
 
