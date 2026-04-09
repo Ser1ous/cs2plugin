@@ -611,6 +611,9 @@ public class MatchManager
             }
         }
 
+        // Capture cash earned this round before flushing
+        CaptureRoundEndEconomy();
+
         // Categorise this round's multi-kills before flushing (resets RoundKills)
         ProcessRoundMultiKills();
 
@@ -933,7 +936,9 @@ public class MatchManager
                 stats.RoundDamageDealt,
                 stats.RoundHeadshots,
                 stats.RoundAssists,
-                stats.RoundEquipmentValue
+                stats.RoundEquipmentValue,
+                stats.RoundMoneySpent,
+                stats.RoundCashEarned
             ));
             // Reset per-round counters
             stats.RoundKills          = 0;
@@ -942,6 +947,9 @@ public class MatchManager
             stats.RoundHeadshots      = 0;
             stats.RoundAssists        = 0;
             stats.RoundEquipmentValue = 0;
+            stats.RoundStartAccount   = 0;
+            stats.RoundMoneySpent     = 0;
+            stats.RoundCashEarned     = 0;
             stats.RoundGotEntry       = false;
         }
         if (rows.Count > 0)
@@ -1226,8 +1234,26 @@ public class MatchManager
     }
 
     /// <summary>
-    /// Captures equipment values at freeze end (after buying, before round starts).
-    /// Must be called via Utilities.GetPlayers() — not from event args.
+    /// Captures each player's account balance at round start (before buying).
+    /// Call from OnRoundStart when state is Live.
+    /// </summary>
+    public void CaptureRoundStartMoney()
+    {
+        if (Context?.State != MatchState.Live) return;
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (!player.IsValid || player.IsBot) continue;
+            int account = player.InGameMoneyServices?.Account ?? 0;
+            int configTeam = GetConfigTeamForPlayer(player.SteamID);
+            string teamName = GetTeamNameForConfigTeam(configTeam);
+            var stats = GetOrCreateStats(player.SteamID, player.PlayerName, configTeam, teamName);
+            stats.RoundStartAccount = account;
+        }
+    }
+
+    /// <summary>
+    /// Captures equipment values and money at freeze end (after buying, before round starts).
+    /// MoneySpent = money_at_round_start − money_now.
     /// </summary>
     public void CaptureEquipmentValues()
     {
@@ -1242,6 +1268,30 @@ public class MatchManager
             var stats = GetOrCreateStats(player.SteamID, player.PlayerName, configTeam, teamName);
             stats.RoundEquipmentValue = pawn.CurrentEquipmentValue;
             stats.EquipmentValue      = pawn.CurrentEquipmentValue;
+
+            int accountNow = player.InGameMoneyServices?.Account ?? 0;
+            stats.MoneyRemaining   = accountNow;
+            stats.RoundMoneySpent  = Math.Max(0, stats.RoundStartAccount - accountNow);
+            stats.MoneySpent      += stats.RoundMoneySpent;
+        }
+    }
+
+    /// <summary>
+    /// Captures cash earned this round = account delta since freeze end (kills + round bonus).
+    /// Call at round end BEFORE FlushRoundPlayers.
+    /// </summary>
+    public void CaptureRoundEndEconomy()
+    {
+        if (Context?.State != MatchState.Live) return;
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (!player.IsValid || player.IsBot) continue;
+            int account = player.InGameMoneyServices?.Account ?? 0;
+            if (!Context.PlayerStats.TryGetValue(player.SteamID, out var stats)) continue;
+            // Cash earned this round = money gained after buying phase ended
+            int earned = Math.Max(0, account - stats.MoneyRemaining);
+            stats.RoundCashEarned = earned;
+            stats.CashEarned     += earned;
         }
     }
 

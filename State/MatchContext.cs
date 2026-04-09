@@ -145,6 +145,9 @@ public class PlayerStats
     public int RoundHeadshots      { get; set; }
     public int RoundAssists        { get; set; }
     public int RoundEquipmentValue { get; set; }
+    public int RoundStartAccount   { get; set; }  // money at round start (before buying)
+    public int RoundMoneySpent     { get; set; }  // money spent buying this round
+    public int RoundCashEarned     { get; set; }  // cash earned after freeze end (kills + bonus)
     public bool RoundGotEntry      { get; set; }  // got first kill this round
 
     // --- Tracking ---

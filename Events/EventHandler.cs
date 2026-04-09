@@ -58,6 +58,7 @@ public class PluginEventHandler
         else if (ctx?.State == MatchState.Live)
         {
             _matchManager.ResetRoundContext();
+            _matchManager.CaptureRoundStartMoney();
         }
 
         return HookResult.Continue;

@@ -615,15 +615,18 @@ WHERE id=@lid", conn);
 INSERT INTO match_round_players
   (lobby_id, round_number, steam_id, name, team,
    kills, deaths, damage, headshot_kills, assists, equipment_value,
+   money_spent, cash_earned,
    created_at, updated_at)
 VALUES
   (@lid, @rnum, @sid, @name, @team,
    @k, @d, @dmg, @hsk, @a, @ev,
+   @ms, @ce,
    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON DUPLICATE KEY UPDATE
   kills=VALUES(kills), deaths=VALUES(deaths), damage=VALUES(damage),
   headshot_kills=VALUES(headshot_kills), assists=VALUES(assists),
   equipment_value=VALUES(equipment_value),
+  money_spent=VALUES(money_spent), cash_earned=VALUES(cash_earned),
   updated_at=CURRENT_TIMESTAMP", conn);
                 cmd.Parameters.AddWithValue("@lid",  r.LobbyId);
                 cmd.Parameters.AddWithValue("@rnum", r.RoundNumber);
@@ -636,6 +639,8 @@ ON DUPLICATE KEY UPDATE
                 cmd.Parameters.AddWithValue("@hsk",  r.HeadshotKills);
                 cmd.Parameters.AddWithValue("@a",    r.Assists);
                 cmd.Parameters.AddWithValue("@ev",   r.EquipmentValue);
+                cmd.Parameters.AddWithValue("@ms",   r.MoneySpent);
+                cmd.Parameters.AddWithValue("@ce",   r.CashEarned);
                 await cmd.ExecuteNonQueryAsync();
             }
         }
@@ -786,7 +791,9 @@ public record RoundPlayerRow(
     int Damage,
     int HeadshotKills,
     int Assists,
-    int EquipmentValue
+    int EquipmentValue,
+    int MoneySpent,
+    int CashEarned
 );
 
 public record ChickenKillData(
