@@ -12,7 +12,11 @@ public class MapChanger
         _plugin = plugin;
     }
 
-    public void ChangeMap(string mapName)
+    /// <summary>
+    /// Changes the map and sets game_type/game_mode immediately before the
+    /// transition command so CS2 reads the correct values in ExecGameTypeCfg.
+    /// </summary>
+    public void ChangeMap(string mapName, int gameType = 0, int gameMode = 0)
     {
         if (string.IsNullOrWhiteSpace(mapName))
         {
@@ -22,18 +26,19 @@ public class MapChanger
 
         _plugin.AddTimer(0.5f, () =>
         {
+            // Set game_type/game_mode immediately before the transition so there
+            // is no window for CS2 to reset them. ExecGameTypeCfg reads these
+            // ConVars at the moment of changelevel/mp_restartgame.
+            Server.ExecuteCommand($"game_type {gameType}");
+            Server.ExecuteCommand($"game_mode {gameMode}");
+
             bool alreadyOnMap = string.Equals(Server.MapName, mapName, StringComparison.OrdinalIgnoreCase);
 
             if (alreadyOnMap)
             {
-                // Already on the correct map — restart in place instead of a full level reload.
-                // changelevel to the same map floods clients with packets during the transition
-                // and causes "recv queue overflow" disconnects.
                 Console.WriteLine($"[CS2Match] Already on {mapName}, using mp_restartgame instead of changelevel");
                 Server.ExecuteCommand("mp_restartgame 3");
 
-                // Fire OnMapStart manually after the restart settles so the plugin
-                // transitions into warmup exactly as it would after a real map change.
                 _plugin.AddTimer(4.0f, () =>
                 {
                     Server.ExecuteCommand($"host_say [CS2Match] Map restarted: {mapName}");
@@ -41,7 +46,6 @@ public class MapChanger
             }
             else
             {
-                // Workshop maps have a numeric ID — use host_workshop_map instead of changelevel
                 bool isWorkshop = ulong.TryParse(mapName, out _);
                 if (isWorkshop)
                 {

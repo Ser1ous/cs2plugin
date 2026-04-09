@@ -96,12 +96,6 @@ public class MatchManager
                 config.NumMaps
             ));
 
-            // Set game_type/game_mode BEFORE the map loads so CS2 initialises
-            // the correct game rules (scoreboard, HUD) from the very first round.
-            // These ConVars have no effect if set after the map is already loaded.
-            Server.ExecuteCommand($"game_type {_pluginConfig.GameType}");
-            Server.ExecuteCommand($"game_mode {_pluginConfig.GameMode}");
-
             string targetMap = config.Maplist[0];
             bool alreadyOnMap = string.Equals(Server.MapName, targetMap, StringComparison.OrdinalIgnoreCase);
 
@@ -111,14 +105,12 @@ public class MatchManager
                 // Use mp_restartgame instead. OnMapStart will NOT fire, so we set
                 // PendingWarmup=true manually — OnFirstRoundStart will pick it up.
                 Context.PendingWarmup = true;
-                _mapChanger.ChangeMap(targetMap); // issues mp_restartgame internally
             }
-            else
-            {
-                // Real map change — OnMapStart fires → sets PendingWarmup=true
-                // → OnFirstRoundStart calls EnterWarmup when server is ready
-                _mapChanger.ChangeMap(targetMap);
-            }
+
+            // game_type/game_mode are passed into ChangeMap so they are set
+            // immediately before changelevel/mp_restartgame — CS2 reads them
+            // right then in ExecGameTypeCfg to pick the correct scoreboard/HUD.
+            _mapChanger.ChangeMap(targetMap, _pluginConfig.GameType, _pluginConfig.GameMode);
         });
     }
 

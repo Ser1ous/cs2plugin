@@ -24,7 +24,7 @@ public class AimManager
     {
         if (_config == null) return;
         Console.WriteLine($"[CS2Match] Switching to AIM mode: {_config.AimMapName}");
-        _mapChanger.ChangeMap(_config.AimMapName);
+        _mapChanger.ChangeMap(_config.AimMapName, _config.AimGameType, _config.AimGameMode);
     }
 
     public void ApplyAimConfig()
