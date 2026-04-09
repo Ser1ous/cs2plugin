@@ -96,6 +96,7 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         RegisterEventHandler<EventCsWinPanelMatch>    (_eventHandler.OnCsWinPanelMatch);
         RegisterEventHandler<EventPlayerConnectFull>  (_eventHandler.OnPlayerConnectFull);
         RegisterEventHandler<EventOtherDeath>         (_eventHandler.OnOtherDeath);
+        RegisterEventHandler<EventRoundMvp>           (_eventHandler.OnRoundMvp);
 
         // Map lifecycle
         RegisterListener<Listeners.OnMapStart>(_eventHandler.OnMapStart);

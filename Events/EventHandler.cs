@@ -55,6 +55,10 @@ public class PluginEventHandler
             // The match is already paused from HandleKnifeWinner's mp_pause_match.
             _matchManager.BroadcastSidePickInfo();
         }
+        else if (ctx?.State == MatchState.Live)
+        {
+            _matchManager.ResetRoundContext();
+        }
 
         return HookResult.Continue;
     }
@@ -74,6 +78,10 @@ public class PluginEventHandler
             _ = _db.LogRoundEventAsync(new RoundEventData(
                 ctx.Config.MatchId, round, "round_start",
                 ctx.Team1Score, ctx.Team2Score, null));
+
+            // Capture equipment values now — this is the only reliable moment
+            // (after buying is complete, before movement begins)
+            _matchManager.CaptureEquipmentValues();
         }
         return HookResult.Continue;
     }
@@ -342,6 +350,18 @@ public class PluginEventHandler
     // -------------------------------------------------------------------------
     // Chicken kills
     // -------------------------------------------------------------------------
+
+    public HookResult OnRoundMvp(EventRoundMvp @event, GameEventInfo info)
+    {
+        var ctx = _matchManager.Context;
+        if (ctx?.State != MatchState.Live) return HookResult.Continue;
+        var player = @event.Userid;
+        if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+        int cfgTeam = _matchManager.GetConfigTeamForPlayer(player.SteamID);
+        string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
+        _matchManager.RecordMvp(player.SteamID, player.PlayerName, cfgTeam, teamName);
+        return HookResult.Continue;
+    }
 
     public HookResult OnOtherDeath(EventOtherDeath @event, GameEventInfo info)
     {

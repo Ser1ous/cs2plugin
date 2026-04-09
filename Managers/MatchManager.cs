@@ -582,6 +582,35 @@ public class MatchManager
         Context.DefuseAttempts.Clear();
         Context.ActiveDefuser = 0;
 
+        // Credit entry win if the entry killer's team won this round
+        if (Context.EntryKillerThisRound != 0 && Context.PlayerStats.TryGetValue(Context.EntryKillerThisRound, out var entryStats))
+        {
+            bool entryTeamWon = (Context.EntryKillerConfigTeam == 1 && Context.Team1Score > 0 &&
+                                 ((Context.Team1Side == TeamSide.CounterTerrorist && @event.Winner == (int)TeamSide.CounterTerrorist) ||
+                                  (Context.Team1Side == TeamSide.Terrorist        && @event.Winner == (int)TeamSide.Terrorist)))
+                             || (Context.EntryKillerConfigTeam == 2 && Context.Team2Score > 0 &&
+                                 ((Context.Team2Side == TeamSide.CounterTerrorist && @event.Winner == (int)TeamSide.CounterTerrorist) ||
+                                  (Context.Team2Side == TeamSide.Terrorist        && @event.Winner == (int)TeamSide.Terrorist)));
+            if (entryTeamWon) entryStats.EntryWins++;
+        }
+
+        // Credit clutch win if the clutcher's team won this round
+        if (Context.ClutchPlayerId != 0 && Context.PlayerStats.TryGetValue(Context.ClutchPlayerId, out var clutchStats))
+        {
+            int winnerTeamNum = @event.Winner; // 2=T, 3=CT
+            bool clutcherWon = (Context.ClutchPlayerConfigTeam == 1 &&
+                                ((Context.Team1Side == TeamSide.CounterTerrorist && winnerTeamNum == (int)TeamSide.CounterTerrorist) ||
+                                 (Context.Team1Side == TeamSide.Terrorist        && winnerTeamNum == (int)TeamSide.Terrorist)))
+                            || (Context.ClutchPlayerConfigTeam == 2 &&
+                                ((Context.Team2Side == TeamSide.CounterTerrorist && winnerTeamNum == (int)TeamSide.CounterTerrorist) ||
+                                 (Context.Team2Side == TeamSide.Terrorist        && winnerTeamNum == (int)TeamSide.Terrorist)));
+            if (clutcherWon)
+            {
+                if (Context.ClutchSituation == 1) clutchStats.V1Wins++;
+                else clutchStats.V2Wins++;
+            }
+        }
+
         // Categorise this round's multi-kills before flushing (resets RoundKills)
         ProcessRoundMultiKills();
 
@@ -827,6 +856,7 @@ public class MatchManager
                 stats.Kills,
                 stats.Deaths,
                 stats.DamageDealt,
+                stats.DamageTaken,
                 stats.Assists,
                 // Multi-kills
                 stats.Kills5k,
@@ -863,7 +893,8 @@ public class MatchManager
                 stats.BombDefuses,
                 // Tracking
                 stats.RoundsPlayed,
-                round
+                round,
+                stats.Mvps
             ));
         }
     }
@@ -880,7 +911,7 @@ public class MatchManager
                 case 3:    stats.Kills3k++; break;
                 case 2:    stats.Kills2k++; break;
             }
-            stats.RoundKills = 0;
+            // Do NOT reset RoundKills here — FlushRoundPlayers reads it and resets it
         }
     }
 
@@ -901,15 +932,17 @@ public class MatchManager
                 stats.RoundDeaths,
                 stats.RoundDamageDealt,
                 stats.RoundHeadshots,
-                stats.RoundAssists
+                stats.RoundAssists,
+                stats.RoundEquipmentValue
             ));
             // Reset per-round counters
-            stats.RoundKills       = 0;
-            stats.RoundDeaths      = 0;
-            stats.RoundDamageDealt = 0;
-            stats.RoundHeadshots   = 0;
-            stats.RoundAssists     = 0;
-            stats.RoundGotEntry    = false;
+            stats.RoundKills          = 0;
+            stats.RoundDeaths         = 0;
+            stats.RoundDamageDealt    = 0;
+            stats.RoundHeadshots      = 0;
+            stats.RoundAssists        = 0;
+            stats.RoundEquipmentValue = 0;
+            stats.RoundGotEntry       = false;
         }
         if (rows.Count > 0)
             _ = _db.InsertRoundPlayersAsync(rows);
@@ -938,6 +971,10 @@ public class MatchManager
     {
         if (Context?.State != MatchState.Live) return;
 
+        // Remove victim from alive tracking before clutch check
+        if (victimConfigTeam == 1) Context.AliveTeam1.Remove(victimSteamId);
+        else if (victimConfigTeam == 2) Context.AliveTeam2.Remove(victimSteamId);
+
         if (attackerSteamId != 0 && attackerSteamId != victimSteamId)
         {
             var aStats = GetOrCreateStats(attackerSteamId, attackerName, attackerConfigTeam, attackerTeamName);
@@ -945,12 +982,57 @@ public class MatchManager
             aStats.RoundKills++;
             if (headshot) { aStats.Headshots++; aStats.RoundHeadshots++; }
             aStats.RoundsPlayed = round;
+
+            // Entry frag: first kill of the round
+            if (Context.EntryKillerThisRound == 0)
+            {
+                Context.EntryKillerThisRound  = attackerSteamId;
+                Context.EntryKillerConfigTeam = attackerConfigTeam;
+                aStats.EntryCount++;
+                aStats.RoundGotEntry = true;
+            }
         }
 
         var vStats = GetOrCreateStats(victimSteamId, victimName, victimConfigTeam, victimTeamName);
         vStats.Deaths++;
         vStats.RoundDeaths++;
         vStats.RoundsPlayed = round;
+
+        // Clutch detection: check if one side is now alone vs multiple enemies
+        CheckClutch();
+    }
+
+    private void CheckClutch()
+    {
+        if (Context == null) return;
+        int alive1 = Context.AliveTeam1.Count;
+        int alive2 = Context.AliveTeam2.Count;
+
+        // 1vN situation: one side has exactly 1 player, other has 1 or 2
+        if (alive1 == 1 && alive2 is 1 or 2 && Context.ClutchPlayerId == 0)
+        {
+            ulong clutcher = Context.AliveTeam1.First();
+            Context.ClutchPlayerId         = clutcher;
+            Context.ClutchSituation        = alive2;
+            Context.ClutchPlayerConfigTeam = 1;
+            if (Context.PlayerStats.TryGetValue(clutcher, out var cs))
+            {
+                if (alive2 == 1) cs.V1Count++;
+                else cs.V2Count++;
+            }
+        }
+        else if (alive2 == 1 && alive1 is 1 or 2 && Context.ClutchPlayerId == 0)
+        {
+            ulong clutcher = Context.AliveTeam2.First();
+            Context.ClutchPlayerId         = clutcher;
+            Context.ClutchSituation        = alive1;
+            Context.ClutchPlayerConfigTeam = 2;
+            if (Context.PlayerStats.TryGetValue(clutcher, out var cs))
+            {
+                if (alive1 == 1) cs.V1Count++;
+                else cs.V2Count++;
+            }
+        }
     }
 
     public void RecordAssist(ulong assistSteamId, string assistName, int configTeam, string teamName,
@@ -992,7 +1074,14 @@ public class MatchManager
                 aStats.RoundDamageDealt += dmgHealth;
                 aStats.ArmorDamage      += dmgArmor;
                 if (isHe)   aStats.HeDamageDealt += dmgHealth;
-                if (isUtil) { aStats.UtilDamage += dmgHealth; aStats.UtilEnemiesHit++; }
+                if (isUtil)
+                {
+                    aStats.UtilDamage += dmgHealth;
+                    aStats.UtilEnemiesHit++;
+                    // Count a util success only once per throw per round
+                    if (Context.RoundUtilSucceeded.Add(attackerSteamId))
+                        aStats.UtilSuccesses++;
+                }
                 // Each player_hurt from a bullet = one shot that connected
                 bool isBullet = !isHe && !isUtil && !weapon.Contains("knife", StringComparison.OrdinalIgnoreCase);
                 if (isBullet) aStats.ShotsOnTarget++;
@@ -1023,7 +1112,9 @@ public class MatchManager
         var stats = GetOrCreateStats(flasherSteamId, flasherName, flasherConfigTeam, flasherTeamName);
         stats.EnemiesFlashed++;
         stats.TotalFlashDuration += duration;
-        stats.FlashSuccesses++;  // this enemy was blinded — at least 1 success for this throw
+        // FlashSuccesses = number of throws that blinded ≥1 enemy (deduplicated per round)
+        if (Context.RoundFlashSucceeded.Add(flasherSteamId))
+            stats.FlashSuccesses++;
         stats.RoundsPlayed = round;
     }
 
@@ -1031,10 +1122,19 @@ public class MatchManager
     {
         if (Context?.State != MatchState.Live) return;
         var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
-        stats.GrenadesThrown++;
         bool isFlash = weapon.Contains("flashbang", StringComparison.OrdinalIgnoreCase);
-        if (isFlash) stats.FlashCount++;
+        if (isFlash)
+            stats.FlashCount++;
+        else
+            stats.GrenadesThrown++;  // utility_count = non-flash grenades (HE, molotov, smoke, etc.)
         stats.RoundsPlayed = round;
+    }
+
+    public void RecordMvp(ulong steamId, string playerName, int configTeam, string teamName)
+    {
+        if (Context?.State != MatchState.Live) return;
+        var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
+        stats.Mvps++;
     }
 
     public void RecordBombPlant(ulong steamId, string playerName, int configTeam, string teamName, int round)
@@ -1119,6 +1219,47 @@ public class MatchManager
         var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
         stats.RoundSpawnTime = CounterStrikeSharp.API.Server.CurrentTime;
         stats.RoundsPlayed = round;
+
+        // Track alive sets for clutch detection
+        if (configTeam == 1) Context.AliveTeam1.Add(steamId);
+        else if (configTeam == 2) Context.AliveTeam2.Add(steamId);
+    }
+
+    /// <summary>
+    /// Captures equipment values at freeze end (after buying, before round starts).
+    /// Must be called via Utilities.GetPlayers() — not from event args.
+    /// </summary>
+    public void CaptureEquipmentValues()
+    {
+        if (Context?.State != MatchState.Live) return;
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (!player.IsValid || player.IsBot) continue;
+            var pawn = player.PlayerPawn?.Value;
+            if (pawn == null) continue;
+            int configTeam = GetConfigTeamForPlayer(player.SteamID);
+            string teamName = GetTeamNameForConfigTeam(configTeam);
+            var stats = GetOrCreateStats(player.SteamID, player.PlayerName, configTeam, teamName);
+            stats.RoundEquipmentValue = pawn.CurrentEquipmentValue;
+            stats.EquipmentValue      = pawn.CurrentEquipmentValue;
+        }
+    }
+
+    /// <summary>
+    /// Resets per-round context state. Call at the start of each live round.
+    /// </summary>
+    public void ResetRoundContext()
+    {
+        if (Context == null) return;
+        Context.EntryKillerThisRound   = 0;
+        Context.EntryKillerConfigTeam  = 0;
+        Context.ClutchPlayerId         = 0;
+        Context.ClutchSituation        = 0;
+        Context.ClutchPlayerConfigTeam = 0;
+        Context.AliveTeam1.Clear();
+        Context.AliveTeam2.Clear();
+        Context.RoundUtilSucceeded.Clear();
+        Context.RoundFlashSucceeded.Clear();
     }
 
     public bool AreSameConfigTeam(ulong steamId1, ulong steamId2)

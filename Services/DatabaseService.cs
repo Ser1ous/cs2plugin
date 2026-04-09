@@ -451,7 +451,7 @@ INSERT INTO match_scoreboard
    entry_count, entry_wins,
    equipment_value, money_saved, kill_reward, live_time,
    headshot_kills, cash_earned, enemies_flashed,
-   bomb_plants, bomb_defuses, rounds_played, last_round)
+   bomb_plants, bomb_defuses, rounds_played, last_round, mvps)
 VALUES
   (@mid,@sid,@name,@ct,@tn,
    @k,@d,@dmg,@a,
@@ -464,7 +464,7 @@ VALUES
    @enc,@enw,
    @eqv,@ms,@kr,@lt,
    @hsk,@ce,@ef,
-   @bp,@bd,@rp,@lr)
+   @bp,@bd,@rp,@lr,@mvp)
 ON DUPLICATE KEY UPDATE
   player_name=VALUES(player_name),
   kills=VALUES(kills), deaths=VALUES(deaths), damage_dealt=VALUES(damage_dealt), assists=VALUES(assists),
@@ -473,12 +473,16 @@ ON DUPLICATE KEY UPDATE
   util_successes=VALUES(util_successes), util_enemies=VALUES(util_enemies),
   flash_count=VALUES(flash_count), flash_successes=VALUES(flash_successes),
   hp_removed_total=VALUES(hp_removed_total), hp_dealt_total=VALUES(hp_dealt_total),
+  shots_fired=VALUES(shots_fired), shots_on_target=VALUES(shots_on_target),
   v1_count=VALUES(v1_count), v1_wins=VALUES(v1_wins),
   v2_count=VALUES(v2_count), v2_wins=VALUES(v2_wins),
   entry_count=VALUES(entry_count), entry_wins=VALUES(entry_wins),
+  equipment_value=VALUES(equipment_value), money_saved=VALUES(money_saved),
+  kill_reward=VALUES(kill_reward), live_time=VALUES(live_time),
   headshot_kills=VALUES(headshot_kills), cash_earned=VALUES(cash_earned), enemies_flashed=VALUES(enemies_flashed),
   bomb_plants=VALUES(bomb_plants), bomb_defuses=VALUES(bomb_defuses),
   rounds_played=VALUES(rounds_played), last_round=VALUES(last_round),
+  mvps=VALUES(mvps),
   updated_at=CURRENT_TIMESTAMP", conn);
 
             cmd.Parameters.AddWithValue("@mid",  r.MatchId);
@@ -500,7 +504,7 @@ ON DUPLICATE KEY UPDATE
             cmd.Parameters.AddWithValue("@ue",   r.UtilEnemiesHit);
             cmd.Parameters.AddWithValue("@fc",   r.FlashCount);
             cmd.Parameters.AddWithValue("@fs",   r.FlashSuccesses);
-            cmd.Parameters.AddWithValue("@hprem",r.DamageDealt);
+            cmd.Parameters.AddWithValue("@hprem",r.DamageTaken);
             cmd.Parameters.AddWithValue("@hpdlt",r.DamageDealt);
             cmd.Parameters.AddWithValue("@sf",   r.ShotsFired);
             cmd.Parameters.AddWithValue("@sot",  r.ShotsOnTarget);
@@ -521,6 +525,7 @@ ON DUPLICATE KEY UPDATE
             cmd.Parameters.AddWithValue("@bd",   r.BombDefuses);
             cmd.Parameters.AddWithValue("@rp",   r.RoundsPlayed);
             cmd.Parameters.AddWithValue("@lr",   r.LastRound);
+            cmd.Parameters.AddWithValue("@mvp",  r.Mvps);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB UpsertScoreboard: {ex.Message}"); }
@@ -609,15 +614,16 @@ WHERE id=@lid", conn);
                 await using var cmd = new MySqlCommand(@"
 INSERT INTO match_round_players
   (lobby_id, round_number, steam_id, name, team,
-   kills, deaths, damage, headshot_kills, assists,
+   kills, deaths, damage, headshot_kills, assists, equipment_value,
    created_at, updated_at)
 VALUES
   (@lid, @rnum, @sid, @name, @team,
-   @k, @d, @dmg, @hsk, @a,
+   @k, @d, @dmg, @hsk, @a, @ev,
    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON DUPLICATE KEY UPDATE
   kills=VALUES(kills), deaths=VALUES(deaths), damage=VALUES(damage),
   headshot_kills=VALUES(headshot_kills), assists=VALUES(assists),
+  equipment_value=VALUES(equipment_value),
   updated_at=CURRENT_TIMESTAMP", conn);
                 cmd.Parameters.AddWithValue("@lid",  r.LobbyId);
                 cmd.Parameters.AddWithValue("@rnum", r.RoundNumber);
@@ -629,6 +635,7 @@ ON DUPLICATE KEY UPDATE
                 cmd.Parameters.AddWithValue("@dmg",  r.Damage);
                 cmd.Parameters.AddWithValue("@hsk",  r.HeadshotKills);
                 cmd.Parameters.AddWithValue("@a",    r.Assists);
+                cmd.Parameters.AddWithValue("@ev",   r.EquipmentValue);
                 await cmd.ExecuteNonQueryAsync();
             }
         }
@@ -727,6 +734,7 @@ public record ScoreboardRow(
     int Kills,
     int Deaths,
     int DamageDealt,
+    int DamageTaken,
     int Assists,
     // Multi-kills
     int Kills5k,
@@ -763,7 +771,8 @@ public record ScoreboardRow(
     int BombDefuses,
     // Tracking
     int RoundsPlayed,
-    int LastRound
+    int LastRound,
+    int Mvps
 );
 
 public record RoundPlayerRow(
@@ -776,7 +785,8 @@ public record RoundPlayerRow(
     int Deaths,
     int Damage,
     int HeadshotKills,
-    int Assists
+    int Assists,
+    int EquipmentValue
 );
 
 public record ChickenKillData(

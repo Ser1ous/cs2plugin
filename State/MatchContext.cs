@@ -41,6 +41,30 @@ public class MatchContext
     public float BombPlantTime { get; set; } = 0f;
     // mp_c4timer value (seconds); default 40
     public float BombTimerLength { get; set; } = 40f;
+
+    // --- Per-round tracking (reset each round) ---
+
+    // Entry frag: steamId of first killer this round (0 = no kill yet)
+    public ulong EntryKillerThisRound { get; set; } = 0;
+    public int EntryKillerConfigTeam  { get; set; } = 0;
+
+    // Alive players per config team — populated by spawn events, cleared on death
+    public HashSet<ulong> AliveTeam1 { get; set; } = new();
+    public HashSet<ulong> AliveTeam2 { get; set; } = new();
+
+    // Clutch: the last surviving player on their team vs N enemies
+    // 0 = no clutch in progress
+    public ulong ClutchPlayerId   { get; set; } = 0;
+    public int   ClutchSituation  { get; set; } = 0;  // 1 = 1v1, 2 = 1v2
+    public int   ClutchPlayerConfigTeam { get; set; } = 0;
+
+    // Util success: tracks which players already scored a util hit this round
+    // (prevents counting every tick of a molotov as a separate success)
+    public HashSet<ulong> RoundUtilSucceeded { get; set; } = new();
+
+    // Flash success: tracks which players already scored a flash hit this round
+    // (prevents counting each blinded enemy as a separate flash success)
+    public HashSet<ulong> RoundFlashSucceeded { get; set; } = new();
 }
 
 public class PlayerStats
@@ -106,18 +130,22 @@ public class PlayerStats
     public int EntryCount { get; set; }  // rounds where player got the first kill
     public int EntryWins  { get; set; }  // of those, rounds the team won
 
+    // --- MVP ---
+    public int Mvps { get; set; }
+
     // --- Bomb ---
     public int BombPlants  { get; set; }
     public int BombDefuses { get; set; }
     public int DefuseAttempts { get; set; }  // times started defusing (includes failed)
 
     // --- Per-round counters (reset at each round end after flush) ---
-    public int RoundKills       { get; set; }
-    public int RoundDeaths      { get; set; }
-    public int RoundDamageDealt { get; set; }
-    public int RoundHeadshots   { get; set; }
-    public int RoundAssists     { get; set; }
-    public bool RoundGotEntry   { get; set; }  // got first kill this round
+    public int RoundKills          { get; set; }
+    public int RoundDeaths         { get; set; }
+    public int RoundDamageDealt    { get; set; }
+    public int RoundHeadshots      { get; set; }
+    public int RoundAssists        { get; set; }
+    public int RoundEquipmentValue { get; set; }
+    public bool RoundGotEntry      { get; set; }  // got first kill this round
 
     // --- Tracking ---
     public int RoundsPlayed { get; set; }
