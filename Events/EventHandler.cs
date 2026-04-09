@@ -352,7 +352,7 @@ public class PluginEventHandler
         // Allow during any active match state so chickens are always announced
         if (ctx == null) return HookResult.Continue;
 
-        var killer = Utilities.GetPlayerFromIndex(@event.Attacker);
+        var killer = Utilities.GetPlayerFromUserid(@event.Attacker);
         if (killer == null || !killer.IsValid || killer.IsBot) return HookResult.Continue;
 
         int round = _matchManager.GetCurrentRound();
@@ -529,12 +529,17 @@ public class PluginEventHandler
         bool isTeam1 = ctx.Config.Team1.Players.ContainsKey(player.SteamID.ToString());
         bool isTeam2 = ctx.Config.Team2.Players.ContainsKey(player.SteamID.ToString());
 
+        if (!isTeam1 && !isTeam2)
+        {
+            player.PrintToChat($" \x04[Match]\x01 You are not registered in this match. Disconnecting...");
+            Server.ExecuteCommand($"kickid {player.UserId} \"You are not registered in this match.\"");
+            return HookResult.Continue;
+        }
+
         if (isTeam1)
             player.PrintToChat($" \x04[Match]\x01 Welcome, \x09{player.PlayerName}\x01! You are on \x0B{ctx.Config.Team1.Name}\x01.");
-        else if (isTeam2)
-            player.PrintToChat($" \x04[Match]\x01 Welcome, \x09{player.PlayerName}\x01! You are on \x0B{ctx.Config.Team2.Name}\x01.");
         else
-            player.PrintToChat($" \x04[Match]\x01 You are not registered in this match (spectator).");
+            player.PrintToChat($" \x04[Match]\x01 Welcome, \x09{player.PlayerName}\x01! You are on \x0B{ctx.Config.Team2.Name}\x01.");
 
         if (ctx.State == MatchState.Warmup)
             player.PrintToChat($" \x04[Match]\x01 Type \x09!ready\x01 when you are ready to play.");

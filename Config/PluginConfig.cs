@@ -27,7 +27,7 @@ public class PluginConfig : BasePluginConfig
     public int GameMode { get; set; } = 1;
 
     // Game mode applied before AIM map load.
-    // game_type 1 + game_mode 0 = Deathmatch
-    public int AimGameType { get; set; } = 1;
-    public int AimGameMode { get; set; } = 0;
+    // game_type 0 + game_mode 1 = Competitive
+    public int AimGameType { get; set; } = 0;
+    public int AimGameMode { get; set; } = 1;
 }
