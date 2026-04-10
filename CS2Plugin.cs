@@ -25,11 +25,12 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
     private CfgExecutor      _cfgExecutor = null!;
 
     // Managers
-    private ReadyManager  _readyManager  = null!;
-    private PauseManager  _pauseManager  = null!;
-    private KnifeManager  _knifeManager  = null!;
-    private AimManager    _aimManager    = null!;
-    private MatchManager  _matchManager  = null!;
+    private ReadyManager           _readyManager  = null!;
+    private PauseManager           _pauseManager  = null!;
+    private KnifeManager           _knifeManager  = null!;
+    private AimManager             _aimManager    = null!;
+    private TeamEnforcementManager _enforcement   = null!;
+    private MatchManager           _matchManager  = null!;
 
     // Commands / Events
     private AdminCommands      _adminCommands  = null!;
@@ -63,10 +64,12 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         _aimManager = new AimManager(_mapChanger, _cfgExecutor);
         _aimManager.Configure(Config);
 
+        _enforcement = new TeamEnforcementManager(this);
+
         _matchManager = new MatchManager(
             _downloader, _mapChanger, _cfgExecutor,
             _readyManager, _pauseManager, _knifeManager,
-            _aimManager, _db, Config, this);
+            _aimManager, _enforcement, _db, Config, this);
 
         // --- Commands & event handler ---
         _adminCommands  = new AdminCommands(_matchManager, _aimManager);
@@ -93,6 +96,7 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         RegisterEventHandler<EventBombExploded>       (_eventHandler.OnBombExploded);
         RegisterEventHandler<EventWeaponFire>         (_eventHandler.OnWeaponFire);
         RegisterEventHandler<EventPlayerSpawn>        (_eventHandler.OnPlayerSpawn);
+        RegisterEventHandler<EventPlayerTeam>         (_eventHandler.OnPlayerChangeTeam);
         RegisterEventHandler<EventCsWinPanelMatch>    (_eventHandler.OnCsWinPanelMatch);
         RegisterEventHandler<EventPlayerConnectFull>  (_eventHandler.OnPlayerConnectFull);
         RegisterEventHandler<EventOtherDeath>         (_eventHandler.OnOtherDeath);

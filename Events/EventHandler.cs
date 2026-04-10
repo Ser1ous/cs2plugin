@@ -356,29 +356,11 @@ public class PluginEventHandler
         var player = @event.Userid;
         if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
 
-        // Auto-correct if CS2's auto-join or timer placed player on wrong side.
-        // Only enforce once sides are assigned (post-knife: Team1Side != None).
-        if (ctx.Team1Side != TeamSide.None)
-        {
-            string sid = player.SteamID.ToString();
-            bool isConfigTeam1 = ctx.Config.Team1.Players.ContainsKey(sid);
-            bool isConfigTeam2 = ctx.Config.Team2.Players.ContainsKey(sid);
-
-            if (isConfigTeam1 || isConfigTeam2)
-            {
-                TeamSide assignedSide = isConfigTeam1 ? ctx.Team1Side : ctx.Team2Side;
-                int expectedTeamNum = (int)assignedSide;
-
-                if (player.TeamNum != expectedTeamNum)
-                {
-                    var correctTeam = (CounterStrikeSharp.API.Modules.Utils.CsTeam)expectedTeamNum;
-                    player.SwitchTeam(correctTeam);
-                    string sideStr = expectedTeamNum == (int)TeamSide.CounterTerrorist ? "CT" : "T";
-                    string configTeamName = isConfigTeam1 ? ctx.Config.Team1.Name : ctx.Config.Team2.Name;
-                    player.PrintToChat($" \x04[Match]\x01 Auto-moved to correct side: \x09{configTeamName}\x01 plays \x09{sideStr}\x01.");
-                }
-            }
-        }
+        // Safety net: if CS2's spawn-side selection placed the player on the
+        // wrong side (e.g. after a respawn race condition), correct it via
+        // the enforcement manager so the switch is pre-authorized and the
+        // dynamic Team1Side/Team2Side mapping stays the source of truth.
+        _matchManager.Enforcement.EnforceSide(player, ctx);
 
         int cfgTeam = _matchManager.GetConfigTeamForPlayer(player.SteamID);
         string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
@@ -487,18 +469,22 @@ public class PluginEventHandler
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Fired when a player issues "jointeam N" (N: 1=spec, 2=T, 3=CT).
+    /// Intercepts the "jointeam N" console command (N: 1=spec, 2=T, 3=CT)
+    /// fired by the M-menu. This is the *front line* of anti-cheat: every
+    /// player-initiated team change passes through here first. EventPlayerTeam
+    /// is a backstop for changes that bypass this listener.
     ///
-    /// AIM mode (no match context): free team switching, no restrictions.
+    /// AIM mode (no match context): no restrictions — players freely pick a side.
     ///
-    /// Any match state (warmup → live):
-    ///   - Unregistered players: blocked from joining any playing team.
-    ///   - Registered players already on a playing team: blocked from switching
-    ///     to the other side (they are already where they belong).
-    ///   - Registered players who are unassigned/spectator joining for the first time:
-    ///       • Sides assigned (post-knife): only their assigned side is allowed.
-    ///       • Sides not yet assigned (warmup/knife): only allowed to join the side
-    ///         their teammates are currently on, never the opponent's side.
+    /// Live / Paused (match in progress):
+    ///   • Hard block any switch to the opposing playing side.
+    ///   • Spectator transitions are allowed; the EnforceSide call on
+    ///     reconnect/respawn will pull them back onto the right side.
+    ///
+    /// Warmup / Knife / SidePick:
+    ///   • Registered players are routed to the side currently held by their
+    ///     internal team (Team1Side/Team2Side, default T/CT pre-knife).
+    ///   • Unregistered players are blocked outright.
     /// </summary>
     public HookResult OnJoinTeam(CCSPlayerController? player, CommandInfo info)
     {
@@ -507,57 +493,165 @@ public class PluginEventHandler
 
         var ctx = _matchManager.Context;
 
-        // AIM mode — no restrictions
+        // AIM mode — no restrictions on team selection
         if (ctx == null) return HookResult.Continue;
 
         if (!int.TryParse(info.GetArg(1), out int requestedTeam))
             return HookResult.Continue;
 
-        // Spectator/unassigned join is always allowed
+        // Spectator / unassigned transitions are tolerated in every state.
+        // Any return-to-play attempt is re-validated below.
         if (requestedTeam <= (int)TeamSide.Spectator)
             return HookResult.Continue;
 
-        string sid = player.SteamID.ToString();
-        bool isConfigTeam1 = ctx.Config.Team1.Players.ContainsKey(sid);
-        bool isConfigTeam2 = ctx.Config.Team2.Players.ContainsKey(sid);
+        var enforcement = _matchManager.Enforcement;
 
-        // Not in match config — block joining any playing side
-        if (!isConfigTeam1 && !isConfigTeam2)
+        // Unregistered players cannot join either playing side at any time.
+        if (!enforcement.IsRegistered(player.SteamID))
         {
             player.PrintToChat(" \x02[Match]\x01 You are not registered in this match.");
             return HookResult.Stop;
         }
 
-        // Player is already on a playing team — block any switch entirely
-        int currentTeam = player.TeamNum;
-        if (currentTeam == (int)TeamSide.CounterTerrorist || currentTeam == (int)TeamSide.Terrorist)
+        var expected = enforcement.GetExpectedSide(player.SteamID, ctx);
+        if (expected == TeamSide.None) return HookResult.Continue;
+
+        // Live session: any deviation from expected side is treated as an
+        // anti-cheat / abuse attempt.
+        if (ctx.State == MatchState.Live || ctx.State == MatchState.Paused)
         {
-            if (requestedTeam != currentTeam)
+            if (requestedTeam != (int)expected)
             {
-                player.PrintToChat(" \x02[Match]\x01 You cannot switch teams during a match.");
+                player.PrintToChat(" \x02[Match]\x01 You cannot switch sides during a live match.");
                 return HookResult.Stop;
             }
-            // Requesting the same team they're already on — allow (no-op)
             return HookResult.Continue;
         }
 
-        // Player is unassigned/spectator joining for the first time.
-        // Only enforce the expected-side check once sides are actually assigned
-        // (i.e. after knife round — Team1Side != None). During warmup and knife
-        // phases Team1Side/Team2Side are None, so we allow the join freely to
-        // avoid blocking CS2's own team-reset during round restarts.
-        TeamSide assignedSide = isConfigTeam1 ? ctx.Team1Side : ctx.Team2Side;
-        if (assignedSide != TeamSide.None)
+        // Warmup / Knife / SidePick: lock to the side currently assigned to
+        // the player's internal team. Team1Side/Team2Side default to T/CT
+        // pre-knife and are flipped by the side pick.
+        if (requestedTeam != (int)expected)
         {
-            int expectedTeam = (int)assignedSide;
-            if (requestedTeam != expectedTeam)
-            {
-                string assignedName = expectedTeam == (int)TeamSide.CounterTerrorist ? "CT" : "T";
-                string configTeamName = isConfigTeam1 ? ctx.Config.Team1.Name : ctx.Config.Team2.Name;
-                player.PrintToChat($" \x02[Match]\x01 {configTeamName} plays as \x09{assignedName}\x01 — please join that side.");
-                return HookResult.Stop;
-            }
+            string assignedName = expected == TeamSide.CounterTerrorist ? "CT" : "T";
+            int internalTeam = enforcement.GetInternalTeam(player.SteamID);
+            string configTeamName = internalTeam == 1 ? ctx.Config.Team1.Name : ctx.Config.Team2.Name;
+            player.PrintToChat($" \x02[Match]\x01 {configTeamName} plays as \x09{assignedName}\x01 — please join that side.");
+            return HookResult.Stop;
         }
+
+        return HookResult.Continue;
+    }
+
+    // -------------------------------------------------------------------------
+    // Backstop team-change enforcement
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// EventPlayerTeam fires for every team transition the engine processes:
+    /// jointeam, mp_restartgame, halftime swap, overtime swap, disconnect, etc.
+    /// This handler is the safety net for changes that bypass OnJoinTeam.
+    ///
+    /// Engine vs player discrimination uses <c>@event.Silent</c>:
+    ///   • The engine sets Silent=true for all server-driven moves —
+    ///     halftime swap, overtime swap, mp_restartgame, the welcome
+    ///     placement after a connect, mp_swapteams, etc. None of these
+    ///     should be reverted, and historically the plugin DID revert
+    ///     them, blocking the OT side swap entirely.
+    ///   • Player-driven moves (M-menu jointeam, console "jointeam N",
+    ///     team-select via UI) come through with Silent=false.
+    ///
+    /// Decision flow:
+    ///   1. Bot / null / disconnect → ignore.
+    ///   2. AIM mode (no context) → allow.
+    ///   3. Unregistered player → ignore (handled by OnJoinTeam).
+    ///   4. Plugin-authorized switch (token present) → consume + allow.
+    ///   5. Engine silent swap → allow, AND if it moved a registered
+    ///      player to the opposite side from what we tracked, flip
+    ///      Team1Side/Team2Side once so the internal mapping follows
+    ///      the engine. This is the key fix for overtime: the engine's
+    ///      OT swap is silent, and after it our Team1Side/Team2Side now
+    ///      match reality on the very next event.
+    ///   6. Going to spectator → allow.
+    ///   7. Side matches expected → allow.
+    ///   8. Otherwise → unauthorized player swap; revert + notify.
+    /// </summary>
+    public HookResult OnPlayerChangeTeam(EventPlayerTeam @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+        if (player == null || !player.IsValid || player.IsBot)
+            return HookResult.Continue;
+
+        // Disconnect-driven team change — never react.
+        if (@event.Disconnect) return HookResult.Continue;
+
+        var ctx = _matchManager.Context;
+        if (ctx == null) return HookResult.Continue; // AIM mode
+
+        var enforcement = _matchManager.Enforcement;
+        if (!enforcement.IsRegistered(player.SteamID))
+            return HookResult.Continue;
+
+        // Plugin-initiated switch — consume the one-shot token and allow.
+        if (enforcement.ConsumeAuthorization(player.SteamID))
+            return HookResult.Continue;
+
+        int newTeam = @event.Team;
+        int oldTeam = @event.Oldteam;
+
+        // -----------------------------------------------------------------
+        // Engine-initiated silent swap (halftime, overtime, restartgame,
+        // welcome placement). Trust the engine and update internal mapping
+        // if it moved the player off the side we had tracked.
+        // -----------------------------------------------------------------
+        if (@event.Silent)
+        {
+            // Only react when moving between two playing sides — joining
+            // from spectator (welcome) does not imply a global side flip.
+            bool fromPlay = oldTeam == (int)TeamSide.CounterTerrorist || oldTeam == (int)TeamSide.Terrorist;
+            bool toPlay   = newTeam == (int)TeamSide.CounterTerrorist || newTeam == (int)TeamSide.Terrorist;
+
+            if (fromPlay && toPlay && newTeam != oldTeam)
+            {
+                var trackedExpected = enforcement.GetExpectedSide(player.SteamID, ctx);
+                if (trackedExpected != TeamSide.None && newTeam != (int)trackedExpected)
+                {
+                    // Engine moved this player to the opposite side from
+                    // what we tracked → our Team1Side/Team2Side mapping is
+                    // stale (e.g. OT swap). Flip it once. The flip is
+                    // idempotent across the rest of the silent swap burst:
+                    // subsequent silent events for other players will hit
+                    // the "already matches" branch and pass through.
+                    _matchManager.OnEngineSideSwap();
+                }
+            }
+            return HookResult.Continue;
+        }
+
+        // Going to spectator/unassigned is tolerated (rejoin will be enforced).
+        if (newTeam <= (int)TeamSide.Spectator)
+            return HookResult.Continue;
+
+        var expected = enforcement.GetExpectedSide(player.SteamID, ctx);
+        if (expected == TeamSide.None) return HookResult.Continue;
+
+        if (newTeam == (int)expected)
+            return HookResult.Continue;
+
+        // Unauthorized player-initiated move to the wrong playing side.
+        // Schedule revert next frame so the engine has finished applying
+        // the original change first.
+        var captured = player;
+        Server.NextFrame(() =>
+        {
+            if (captured == null || !captured.IsValid) return;
+            var currentCtx = _matchManager.Context;
+            if (currentCtx == null) return;
+            var nowExpected = _matchManager.Enforcement.GetExpectedSide(captured.SteamID, currentCtx);
+            if (nowExpected == TeamSide.None) return;
+            _matchManager.Enforcement.ForceSwitch(captured, nowExpected);
+            captured.PrintToChat(" \x02[Match]\x01 You cannot switch to the opposing team during a match.");
+        });
 
         return HookResult.Continue;
     }
@@ -587,25 +681,38 @@ public class PluginEventHandler
         if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
 
         var ctx = _matchManager.Context;
+        // AIM mode — let the player join freely
         if (ctx == null) return HookResult.Continue;
 
-        bool isTeam1 = ctx.Config.Team1.Players.ContainsKey(player.SteamID.ToString());
-        bool isTeam2 = ctx.Config.Team2.Players.ContainsKey(player.SteamID.ToString());
+        var enforcement = _matchManager.Enforcement;
 
-        if (!isTeam1 && !isTeam2)
+        // Players not in the match config are kicked outright.
+        if (!enforcement.IsRegistered(player.SteamID))
         {
             player.PrintToChat($" \x04[Match]\x01 You are not registered in this match. Disconnecting...");
             Server.ExecuteCommand($"kickid {player.UserId} \"You are not registered in this match.\"");
             return HookResult.Continue;
         }
 
-        if (isTeam1)
-            player.PrintToChat($" \x04[Match]\x01 Welcome, \x09{player.PlayerName}\x01! You are on \x0B{ctx.Config.Team1.Name}\x01.");
-        else
-            player.PrintToChat($" \x04[Match]\x01 Welcome, \x09{player.PlayerName}\x01! You are on \x0B{ctx.Config.Team2.Name}\x01.");
+        int internalTeam = enforcement.GetInternalTeam(player.SteamID);
+        string teamName = internalTeam == 1 ? ctx.Config.Team1.Name : ctx.Config.Team2.Name;
+        player.PrintToChat($" \x04[Match]\x01 Welcome, \x09{player.PlayerName}\x01! You are on \x0B{teamName}\x01.");
 
         if (ctx.State == MatchState.Warmup)
             player.PrintToChat($" \x04[Match]\x01 Type \x09!ready\x01 when you are ready to play.");
+
+        // Force the player onto their team's *current* side. Critical for
+        // reconnects mid-live: if Team A is now on CT due to halftime/overtime,
+        // the player lands directly on CT — no manual jointeam required.
+        // Defer one frame so the controller is fully spawned before SwitchTeam.
+        var captured = player;
+        Server.NextFrame(() =>
+        {
+            if (captured == null || !captured.IsValid) return;
+            var currentCtx = _matchManager.Context;
+            if (currentCtx == null) return;
+            _matchManager.Enforcement.EnforceSide(captured, currentCtx);
+        });
 
         return HookResult.Continue;
     }

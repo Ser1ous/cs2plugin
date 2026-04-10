@@ -16,11 +16,18 @@ public class MatchManager
     private readonly PauseManager _pauseManager;
     private readonly KnifeManager _knifeManager;
     private readonly AimManager _aimManager;
+    private readonly TeamEnforcementManager _enforcement;
     private readonly DatabaseService _db;
     private readonly PluginConfig _pluginConfig;
     private readonly BasePlugin _plugin;
 
     public MatchContext? Context { get; private set; }
+
+    /// <summary>
+    /// Centralized team-locking. Always non-null; <see cref="TeamEnforcementManager.Enabled"/>
+    /// is false in AIM mode and true while a match is loaded.
+    /// </summary>
+    public TeamEnforcementManager Enforcement => _enforcement;
 
     public MatchManager(
         ConfigDownloader downloader,
@@ -30,6 +37,7 @@ public class MatchManager
         PauseManager pauseManager,
         KnifeManager knifeManager,
         AimManager aimManager,
+        TeamEnforcementManager enforcement,
         DatabaseService db,
         PluginConfig pluginConfig,
         BasePlugin plugin)
@@ -41,6 +49,7 @@ public class MatchManager
         _pauseManager = pauseManager;
         _knifeManager = knifeManager;
         _aimManager   = aimManager;
+        _enforcement  = enforcement;
         _db           = db;
         _pluginConfig = pluginConfig;
         _plugin       = plugin;
@@ -85,6 +94,7 @@ public class MatchManager
             };
             _readyManager.Setup(config);
             _pauseManager.Setup(config);
+            _enforcement.LoadFromConfig(config);
 
             feedback($"Loaded: {config.MatchId} | {config.Team1.Name} vs {config.Team2.Name} | Map: {config.Maplist[0]}");
             _ = _db.LogMatchEventAsync(config.MatchId, "match_loaded", $"{{\"url\":\"{url}\"}}");
@@ -193,6 +203,13 @@ public class MatchManager
         Context.State = MatchState.Warmup;
         _readyManager.Reset();
 
+        // Belt-and-braces: clear any lingering pause state from a previous
+        // match/abort before applying the warmup cfg. warmup.cfg sets
+        // mp_warmup_pausetimer 1 which freezes the timer until ready-up,
+        // but mp_pause_match could still be held over from the previous
+        // context (e.g. aborted during a tech pause).
+        Server.ExecuteCommand("mp_unpause_match");
+
         _cfgExecutor.ExecCfg(_pluginConfig.WarmupCfgName);
         Server.ExecuteCommand("mp_warmup_start");
 
@@ -244,6 +261,18 @@ public class MatchManager
 
         Context.State = MatchState.Knife;
         _cfgExecutor.ExecCfg(_pluginConfig.KnifeCfgName);
+
+        // Bug fix: warmup.cfg sets mp_warmup_pausetimer 1 (timer frozen until
+        // everyone is ready). knife.cfg does NOT reset it, so the frozen
+        // pause state leaks through and mp_warmup_end cannot exit warmup —
+        // the match hangs indefinitely on the knife round transition.
+        //
+        // Explicitly clear both the warmup pause timer AND any active match
+        // pause here before issuing restartgame/warmup_end. Order matters:
+        // unpause first, then the restart, then drop warmup.
+        Server.ExecuteCommand("mp_warmup_pausetimer 0");
+        Server.ExecuteCommand("mp_unpause_match");
+
         // Match MatchZy's knife.cfg order: restartgame first (1s countdown),
         // then warmup_end (exits warmup immediately). By the time the restart fires
         // warmup has ended and the round starts cleanly with knife settings.
@@ -426,9 +455,12 @@ public class MatchManager
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team2.Name} starts as \x09{SideName(Context.Team2Side)}\x01");
 
         // Apply all competitive cvars then exit warmup.
-        // mp_warmup_end is called after the cfg so all cvars are set before BeginMatch fires.
+        // Same leftover-pause fix as StartKnifeRound: warmup.cfg froze the
+        // pause timer, so clear it before exiting warmup.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        Server.ExecuteCommand("mp_warmup_pausetimer 0");
+        Server.ExecuteCommand("mp_unpause_match");
         Server.ExecuteCommand("mp_warmup_end");
 
         BroadcastLive();
@@ -469,20 +501,12 @@ public class MatchManager
     private void MovePlayers()
     {
         if (Context == null) return;
+        // Delegated to TeamEnforcementManager so the switches are pre-authorized
+        // and don't trip the EventPlayerTeam revert logic.
         foreach (var player in Utilities.GetPlayers())
         {
             if (!player.IsValid || player.IsBot) continue;
-            string sid = player.SteamID.ToString();
-            int targetSide;
-            if (Context.Config.Team1.Players.ContainsKey(sid))
-                targetSide = (int)Context.Team1Side;
-            else if (Context.Config.Team2.Players.ContainsKey(sid))
-                targetSide = (int)Context.Team2Side;
-            else
-                continue;
-
-            if (player.TeamNum != targetSide)
-                player.SwitchTeam((CounterStrikeSharp.API.Modules.Utils.CsTeam)targetSide);
+            _enforcement.EnforceSide(player, Context);
         }
     }
 
@@ -688,27 +712,54 @@ public class MatchManager
         if (!t1 && !t2) return;
 
         // Overtime: both teams reached the regulation win threshold — the map
-        // is tied going into overtime. Let CS2 run overtime as configured
-        // (mp_overtime_enable, mp_overtime_maxrounds). Only declare a winner
-        // once one team leads by more than 1 round past the regulation threshold,
-        // meaning they actually won an overtime half.
+        // is going into (or already in) overtime. Single-OT rule: we only
+        // allow ONE overtime period; if it ends tied the map is a draw.
         if (t1 && t2)
         {
-            // Tied at regulation end — CS2 will start overtime automatically.
-            // Reset to no-win state and let overtime play out.
+            int otMaxRounds = GetOvertimeMaxRounds();   // default 6 (3+3)
+            int totalPlayed = Context.Team1Score + Context.Team2Score;
+
+            // OT1 has fully played out (regulation rounds + one full OT) and
+            // the score is still tied → declare a draw immediately. EventCs-
+            // WinPanelMatch won't fire for a tie because mp_overtime_enable
+            // would normally start OT2; we preempt that here.
+            if (totalPlayed >= maxRounds + otMaxRounds &&
+                Context.Team1Score == Context.Team2Score)
+            {
+                BroadcastAll(" \x04[Match]\x01 Single overtime ended tied — match is a \x09DRAW\x01.");
+                // Disable further overtimes so the engine doesn't try to
+                // queue OT2 between now and the manual map-end.
+                Server.ExecuteCommand("mp_overtime_enable 0");
+                // Defer one frame so this OnRoundEnd callback fully unwinds
+                // before the map-end / changemap path runs.
+                Server.NextFrame(OnMapWin);
+                return;
+            }
+
+            // Otherwise, let OT1 play out — CS2 starts overtime automatically.
             return;
         }
 
-        // In overtime, scores exceed toWin. Only trigger map win when the score
-        // gap is decisive (i.e. one team is strictly ahead and the other can no
-        // longer catch up within the current overtime period). CS2's own
-        // mp_match_can_clinch handles this — just trust EventCsWinPanelMatch.
-        // Guard: skip if we are past regulation (scores sum exceeds maxRounds).
+        // In overtime one side has pulled ahead. Trust EventCsWinPanelMatch
+        // for the actual map end; this guard just prevents the round-end
+        // loop from declaring a winner before the engine does.
         if (Context.Team1Score + Context.Team2Score > maxRounds) return;
+    }
 
-        // Regulation win detected — do nothing here; OnMapWin() via
-        // EventCsWinPanelMatch is the single authority for map-end logic.
-        // This guard just prevents the round-end loop from running into overtime.
+    /// <summary>
+    /// Resolves mp_overtime_maxrounds from the loaded config (or live cvar
+    /// fallback). Defaults to 6 (3+3) which matches MR12 conventions.
+    /// </summary>
+    private int GetOvertimeMaxRounds()
+    {
+        if (Context != null &&
+            Context.Config.Cvars.TryGetValue("mp_overtime_maxrounds", out var s) &&
+            int.TryParse(s, out var v) && v > 0)
+            return v;
+        var cv = ConVar.Find("mp_overtime_maxrounds");
+        if (cv != null && cv.GetPrimitiveValue<int>() > 0)
+            return cv.GetPrimitiveValue<int>();
+        return 6;
     }
 
     /// <summary>
@@ -721,18 +772,27 @@ public class MatchManager
 
         bool t1 = Context.Team1Score > Context.Team2Score;
         bool t2 = Context.Team2Score > Context.Team1Score;
+        bool draw = !t1 && !t2;
 
-        if (t1) Context.MapWinsTeam1++;
-        else if (t2) Context.MapWinsTeam2++;
-        // exact tie (draw) — no map win credited
+        if (t1)        Context.MapWinsTeam1++;
+        else if (t2)   Context.MapWinsTeam2++;
+        else           Context.MapDraws++;   // CS_WM_DRAW — counted as a played map
 
         string winner = t1 ? Context.Config.Team1.Name
                       : t2 ? Context.Config.Team2.Name
                            : "Draw";
-        BroadcastAll($" \x04[Match]\x01 {winner} wins the map! Series: {Context.MapWinsTeam1}-{Context.MapWinsTeam2}");
+
+        if (draw)
+        {
+            BroadcastAll($" \x04[Match]\x01 Map ended in a \x09DRAW\x01 ({Context.Team1Score}-{Context.Team2Score}). Series: {Context.MapWinsTeam1}-{Context.MapWinsTeam2} ({Context.MapDraws} draw{(Context.MapDraws == 1 ? "" : "s")})");
+        }
+        else
+        {
+            BroadcastAll($" \x04[Match]\x01 {winner} wins the map! Series: {Context.MapWinsTeam1}-{Context.MapWinsTeam2}");
+        }
 
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "map_end",
-            $"{{\"winner\":\"{winner}\",\"t1\":{Context.Team1Score},\"t2\":{Context.Team2Score}}}");
+            $"{{\"winner\":\"{winner}\",\"t1\":{Context.Team1Score},\"t2\":{Context.Team2Score},\"draw\":{(draw ? "true" : "false")}}}");
 
         CheckSeriesProgress();
     }
@@ -745,9 +805,14 @@ public class MatchManager
             ? (int)Math.Ceiling(Context.Config.NumMaps / 2.0)
             : Context.Config.NumMaps;
 
+        // Draws count toward total maps played but not toward either team's
+        // win tally. Without including them in this check, a 1-map match
+        // that ended in a draw would advance to a non-existent next map.
+        int mapsPlayed = Context.MapWinsTeam1 + Context.MapWinsTeam2 + Context.MapDraws;
+
         bool seriesOver = Context.MapWinsTeam1 >= mapsToWin
                        || Context.MapWinsTeam2 >= mapsToWin
-                       || (Context.MapWinsTeam1 + Context.MapWinsTeam2) >= Context.Config.NumMaps;
+                       || mapsPlayed >= Context.Config.NumMaps;
 
         if (seriesOver)
         {
@@ -785,7 +850,7 @@ public class MatchManager
         // Final scoreboard flush then close
         FlushScoreboard(finalRound);
         _ = _db.LogMatchEventAsync(closingMatchId, "series_end",
-            $"{{\"t1_maps\":{Context.MapWinsTeam1},\"t2_maps\":{Context.MapWinsTeam2}}}");
+            $"{{\"t1_maps\":{Context.MapWinsTeam1},\"t2_maps\":{Context.MapWinsTeam2},\"draws\":{Context.MapDraws}}}");
         _ = _db.FinishMatchAsync(closingMatchId, Context.Team1Score, Context.Team2Score);
         _ = _db.CloseScoreboardAsync(closingMatchId);
 
@@ -801,6 +866,7 @@ public class MatchManager
             Console.WriteLine($"[CS2Match] WARNING: Could not parse MatchId '{Context.Config.MatchId}' as ulong — lobby not updated");
         }
 
+        _enforcement.Clear();
         Context = null;
 
         // Return to AIM map after giving players a moment to read the result
@@ -883,6 +949,7 @@ public class MatchManager
             BroadcastAll(" \x02[Match]\x01 Match aborted.");
             _ = _db.LogMatchEventAsync(Context.Config.MatchId, "match_aborted");
         }
+        _enforcement.Clear();
         Context = null;
     }
 
@@ -1381,6 +1448,40 @@ public class MatchManager
         Context.RoundFlashSucceeded.Clear();
         Context.PlayerCurrentHp.Clear();
     }
+
+    /// <summary>
+    /// Called by the EventPlayerTeam handler when an engine-driven silent
+    /// swap moves a player to the side opposite of what Team1Side/Team2Side
+    /// currently tracks. Flips the internal mapping so subsequent reconnects
+    /// and respawns land on the correct side.
+    ///
+    /// Idempotency: this is invoked from inside a swap burst (one event per
+    /// player). The first call flips the mapping; from that point on, every
+    /// other player in the burst will already match and the handler will
+    /// short-circuit before calling this method. The <see cref="_lastSwapTick"/>
+    /// guard adds belt-and-braces protection against the edge case where the
+    /// flip would otherwise be detected twice in the same server tick.
+    /// </summary>
+    public void OnEngineSideSwap()
+    {
+        if (Context == null) return;
+        if (Context.State != MatchState.Live && Context.State != MatchState.Paused) return;
+
+        int tick = Server.TickCount;
+        if (tick == _lastEngineSwapTick) return;
+        _lastEngineSwapTick = tick;
+
+        var prev1 = Context.Team1Side;
+        var prev2 = Context.Team2Side;
+        Context.Team1Side = prev2;
+        Context.Team2Side = prev1;
+
+        Console.WriteLine(
+            $"[CS2Match] OnEngineSideSwap: detected engine swap. " +
+            $"Team1Side {prev1}→{Context.Team1Side}, Team2Side {prev2}→{Context.Team2Side}");
+    }
+
+    private int _lastEngineSwapTick = -1;
 
     public bool AreSameConfigTeam(ulong steamId1, ulong steamId2)
     {

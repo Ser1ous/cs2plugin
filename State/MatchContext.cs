@@ -26,6 +26,9 @@ public class MatchContext
     public int Team2Score { get; set; } = 0;
     public int MapWinsTeam1 { get; set; } = 0;
     public int MapWinsTeam2 { get; set; } = 0;
+    // Maps that ended in a draw (single-OT rule). Counted toward series
+    // progression but credited to neither side.
+    public int MapDraws    { get; set; } = 0;
 
     public TeamSide Team1Side { get; set; } = TeamSide.None;
     public TeamSide Team2Side { get; set; } = TeamSide.None;
