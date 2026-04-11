@@ -19,10 +19,12 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
     public PluginConfig Config { get; set; } = new();
 
     // Services
-    private DatabaseService  _db         = null!;
-    private ConfigDownloader _downloader = null!;
-    private MapChanger       _mapChanger = null!;
-    private CfgExecutor      _cfgExecutor = null!;
+    private DatabaseService  _db               = null!;
+    private ConfigDownloader _downloader       = null!;
+    private MapChanger       _mapChanger       = null!;
+    private CfgExecutor      _cfgExecutor      = null!;
+    private GameModeSwitcher _gameModeSwitcher = null!;
+    private WebhookNotifier  _webhookNotifier  = null!;
 
     // Managers
     private ReadyManager           _readyManager  = null!;
@@ -52,16 +54,18 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         _db = new DatabaseService();
         _db.Configure(Config);
 
-        _downloader  = new ConfigDownloader();
-        _mapChanger  = new MapChanger(this);
-        _cfgExecutor = new CfgExecutor();
+        _downloader       = new ConfigDownloader();
+        _gameModeSwitcher = new GameModeSwitcher(this);
+        _mapChanger       = new MapChanger(this);
+        _cfgExecutor      = new CfgExecutor();
+        _webhookNotifier  = new WebhookNotifier();
 
         // --- Managers ---
         _readyManager = new ReadyManager();
         _pauseManager = new PauseManager();
         _knifeManager = new KnifeManager();
 
-        _aimManager = new AimManager(_mapChanger, _cfgExecutor);
+        _aimManager = new AimManager(_mapChanger, _cfgExecutor, _gameModeSwitcher, this);
         _aimManager.Configure(Config);
 
         _enforcement = new TeamEnforcementManager(this);
@@ -69,7 +73,8 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         _matchManager = new MatchManager(
             _downloader, _mapChanger, _cfgExecutor,
             _readyManager, _pauseManager, _knifeManager,
-            _aimManager, _enforcement, _db, Config, this);
+            _aimManager, _enforcement, _db, Config, this,
+            _gameModeSwitcher, _webhookNotifier);
 
         // --- Commands & event handler ---
         _adminCommands  = new AdminCommands(_matchManager, _aimManager);

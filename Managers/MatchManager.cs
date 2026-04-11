@@ -20,6 +20,8 @@ public class MatchManager
     private readonly DatabaseService _db;
     private readonly PluginConfig _pluginConfig;
     private readonly BasePlugin _plugin;
+    private readonly GameModeSwitcher _gameModeSwitcher;
+    private readonly WebhookNotifier _webhookNotifier;
 
     public MatchContext? Context { get; private set; }
 
@@ -28,6 +30,7 @@ public class MatchManager
     /// is false in AIM mode and true while a match is loaded.
     /// </summary>
     public TeamEnforcementManager Enforcement => _enforcement;
+    public AimManager AimManager => _aimManager;
 
     public MatchManager(
         ConfigDownloader downloader,
@@ -40,19 +43,23 @@ public class MatchManager
         TeamEnforcementManager enforcement,
         DatabaseService db,
         PluginConfig pluginConfig,
-        BasePlugin plugin)
+        BasePlugin plugin,
+        GameModeSwitcher gameModeSwitcher,
+        WebhookNotifier webhookNotifier)
     {
-        _downloader   = downloader;
-        _mapChanger   = mapChanger;
-        _cfgExecutor  = cfgExecutor;
-        _readyManager = readyManager;
-        _pauseManager = pauseManager;
-        _knifeManager = knifeManager;
-        _aimManager   = aimManager;
-        _enforcement  = enforcement;
-        _db           = db;
-        _pluginConfig = pluginConfig;
-        _plugin       = plugin;
+        _downloader      = downloader;
+        _mapChanger      = mapChanger;
+        _cfgExecutor     = cfgExecutor;
+        _readyManager    = readyManager;
+        _pauseManager    = pauseManager;
+        _knifeManager    = knifeManager;
+        _aimManager      = aimManager;
+        _enforcement     = enforcement;
+        _db              = db;
+        _pluginConfig    = pluginConfig;
+        _plugin          = plugin;
+        _gameModeSwitcher = gameModeSwitcher;
+        _webhookNotifier = webhookNotifier;
 
         _readyManager.OnAllReady         += StartKnifeRound;
         _pauseManager.OnBothTeamsUnpaused += HandleUnpause;
@@ -65,24 +72,101 @@ public class MatchManager
     // Load match from URL
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Loads a match from URL, forcefully overriding any in-progress match
+    /// or AIM session. Design notes:
+    ///
+    /// • NEVER rejects the load based on current server state. If a match
+    ///   is already active (warmup, knife, live, paused) it is torn down
+    ///   and the new config takes over. This is intentional — the plugin
+    ///   is driven by an external lobby orchestrator and must be a slave
+    ///   to whatever URL it's handed.
+    /// • Clears AIM-mode cvar overrides (freezetime etc.) before the new
+    ///   warmup/competitive cfg runs, so AIM settings never leak into a
+    ///   real match.
+    /// • The download runs on the thread-pool; the actual state transition
+    ///   is marshalled to the main game thread via Server.NextFrame so we
+    ///   can safely touch CCSPlayerController, cvars, and change the map.
+    /// </summary>
     public async Task LoadMatchFromUrlAsync(string url, Action<string> feedback)
     {
+        // NOTE: this runs on the caller's thread up to the first await,
+        // so feedback("Downloading...") is still safely on the main
+        // game thread. After `await _downloader.DownloadAsync(url)` the
+        // continuation resumes on a thread-pool thread (CSS does not
+        // install a SynchronizationContext). From that point on NOTHING
+        // that touches native CSS state — including the feedback Action
+        // (which wraps CommandInfo.ReplyToCommand), ConVar.Find,
+        // Server.ExecuteCommand, Context mutation — may be called
+        // directly. We marshal everything back to main thread via
+        // Server.NextFrame, including the error-path feedback().
         feedback("Downloading match config...");
-        MatchConfig config;
+
+        MatchConfig? config = null;
+        string? downloadError = null;
         try
         {
-            config = await _downloader.DownloadAsync(url);
+            config = await _downloader.DownloadAsync(url).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            feedback($"Error loading config: {ex.Message}");
-            return;
+            downloadError = ex.Message;
         }
 
         Server.NextFrame(() =>
         {
+            // Error path: now we're back on the main thread so feedback
+            // (→ native ReplyToCommand) is safe to invoke. Before the
+            // fix, this line ran on the thread pool and triggered
+            // "Native was invoked on a non-main thread".
+            if (downloadError != null)
+            {
+                feedback($"Error loading config: {downloadError}");
+                Console.WriteLine($"[CS2Match] LoadMatchFromUrl: download failed — {downloadError}");
+                return;
+            }
+            if (config == null)
+            {
+                feedback("Error loading config: empty response");
+                return;
+            }
+            // ---------- Force-override: wipe any prior state ----------
+            // This path runs for every load, regardless of whether a match
+            // is active, the server is in AIM mode, or it's been idle. We
+            // intentionally do NOT return early on "match already running".
+            bool wasInMatch = Context != null;
+            var priorState  = Context?.State ?? MatchState.None;
+
+            if (wasInMatch)
+            {
+                Console.WriteLine(
+                    $"[CS2Match] LoadMatchFromUrl: FORCE-OVERRIDE active match " +
+                    $"(prior state: {priorState}) with new config from {url}");
+                feedback($"Overriding active match (was: {priorState}) with new config...");
+                BroadcastAll(" \x02[Match]\x01 New match config received — aborting current match.");
+            }
+            else
+            {
+                Console.WriteLine($"[CS2Match] LoadMatchFromUrl: loading {url} (server was in AIM / idle)");
+            }
+
+            // Tear down any prior match's sub-manager state and clear
+            // Context. This runs synchronously before we build the new
+            // Context so ready/pause/enforcement dicts never alias.
             AbortMatch(silent: true);
 
+            // Revert any AIM-only cvar overrides (e.g. mp_freezetime 2)
+            // so the upcoming competitive preset / warmup.cfg / JSON
+            // cvars cleanly overwrite them. Without this, an AIM→Live
+            // transition could leave the 2s freezetime in effect until
+            // the first cfg load.
+            _aimManager.ClearAimOverrides();
+
+            // ---------- Install the new match context ----------
+            // Order matters: we create the Context BEFORE scheduling the
+            // delayed map change so that OnMapStart (which will fire when
+            // the changelevel lands ~1s from now) sees Context != null
+            // and routes into the Warmup path instead of the AIM path.
             Context = new MatchContext
             {
                 Config = config,
@@ -97,7 +181,8 @@ public class MatchManager
             _enforcement.LoadFromConfig(config);
 
             feedback($"Loaded: {config.MatchId} | {config.Team1.Name} vs {config.Team2.Name} | Map: {config.Maplist[0]}");
-            _ = _db.LogMatchEventAsync(config.MatchId, "match_loaded", $"{{\"url\":\"{url}\"}}");
+            _ = _db.LogMatchEventAsync(config.MatchId, "match_loaded",
+                $"{{\"url\":\"{url}\",\"force_override\":{(wasInMatch ? "true" : "false")},\"prior_state\":\"{priorState}\"}}");
             _ = _db.CreateMatchAsync(new MatchRow(
                 config.MatchId,
                 config.LobbyId,
@@ -107,21 +192,38 @@ public class MatchManager
                 config.NumMaps
             ));
 
-            string targetMap = config.Maplist[0];
+            string targetMap  = config.Maplist[0];
             bool alreadyOnMap = string.Equals(Server.MapName, targetMap, StringComparison.OrdinalIgnoreCase);
 
             if (alreadyOnMap)
             {
-                // changelevel to the same map causes queue overflow disconnects.
-                // Use mp_restartgame instead. OnMapStart will NOT fire, so we set
-                // PendingWarmup=true manually — OnFirstRoundStart will pick it up.
+                // Fast path: same map. No need for the 1-second delayed
+                // changelevel dance — mp_restartgame is enough. OnMapStart
+                // does NOT fire in this path so we set PendingWarmup
+                // ourselves; the next OnFirstRoundStart picks it up.
+                Console.WriteLine(
+                    $"[CS2Match] LoadMatchFromUrl: fast-path restart " +
+                    $"(same map already loaded)");
                 Context.PendingWarmup = true;
+                Server.ExecuteCommand("mp_warmup_pausetimer 0");
+                Server.ExecuteCommand("mp_unpause_match");
+                Server.ExecuteCommand("mp_restartgame 3");
+                return;
             }
 
-            // game_type/game_mode are passed into ChangeMap so they are set
-            // immediately before changelevel/mp_restartgame — CS2 reads them
-            // right then in ExecGameTypeCfg to pick the correct scoreboard/HUD.
-            _mapChanger.ChangeMap(targetMap, _pluginConfig.GameType, _pluginConfig.GameMode);
+            // Slow path: different map. Use the delayed, cancellable
+            // map-change helper. Rapid repeats of this call (admin spamming
+            // load_url) cancel the previous pending callback via the
+            // sequence-number check inside MapChangeDelayed, so we never
+            // stack map reloads.
+            Console.WriteLine(
+                $"[CS2Match] LoadMatchFromUrl: scheduling delayed map change " +
+                $"(target map={targetMap})");
+
+            _gameModeSwitcher.MapChangeDelayed(
+                targetMap,
+                label: "Match load",
+                delaySeconds: 1.0f);
         });
     }
 
@@ -138,8 +240,18 @@ public class MatchManager
     {
         if (Context == null)
         {
-            // AIM mode: flag pending so OnFirstRoundStart applies the aim cfg
+            // AIM mode: flag pending so OnFirstRoundStart applies the aim cfg.
+            // Also reset AimManager's "applied" flag AND its loop guard so
+            // the new map re-runs the cfg (and importantly re-locks
+            // mp_freezetime 2) either on the first RoundStart or on the
+            // first player connect — whichever fires first.
+            //
+            // OnAimMapStart() also re-asserts mp_warmup_pausetimer 0,
+            // sv_pausable 0, and mp_unpause_match — guarding against the
+            // "stuck pause" symptom where a previous match's pause state
+            // survived a map reload into AIM.
             Console.WriteLine($"[CS2Match] Map starting (AIM mode): {mapName}");
+            _aimManager.OnAimMapStart();
             return;
         }
 
@@ -181,7 +293,7 @@ public class MatchManager
         if (Context == null)
         {
             if (_aimManager.IsAimMap(currentMapName))
-                _aimManager.ApplyAimConfig();
+                _aimManager.EnsureAimApplied();
             return;
         }
 
@@ -602,6 +714,10 @@ public class MatchManager
         _ = _db.LogRoundEventAsync(new RoundEventData(
             Context.Config.MatchId, round, "round_end",
             Context.Team1Score, Context.Team2Score, @event.Winner));
+
+        // Outbound round-end webhook (fire-and-forget, no-op if URL unset).
+        _webhookNotifier.PostRoundEnd(
+            _pluginConfig.RoundEndWebhookUrl, Context.Config.MatchId, round);
         _ = _db.UpdateMatchAsync(Context.Config.MatchId,
             Context.Team1Score, Context.Team2Score, "live",
             Context.Config.Maplist[Context.CurrentMapIndex], Context.CurrentMapIndex + 1);
@@ -794,6 +910,9 @@ public class MatchManager
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "map_end",
             $"{{\"winner\":\"{winner}\",\"t1\":{Context.Team1Score},\"t2\":{Context.Team2Score},\"draw\":{(draw ? "true" : "false")}}}");
 
+        // Outbound map-end webhook (fire-and-forget, no-op if URL unset).
+        _webhookNotifier.PostMapEnd(_pluginConfig.MapEndWebhookUrl, Context.Config.MatchId);
+
         CheckSeriesProgress();
     }
 
@@ -941,16 +1060,43 @@ public class MatchManager
     // Abort
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tears down the current match state AND every sub-manager that holds
+    /// match-scoped data (ready votes, pause votes, enforcement dictionary).
+    /// Also clears any lingering server pause state so a subsequent
+    /// LoadMatchFromUrlAsync can immediately execute cfgs / restartgame
+    /// without the engine swallowing commands under a frozen pause.
+    ///
+    /// Safe to call when Context is already null (acts as a "reset to
+    /// neutral server state" helper used by force-override loads from AIM).
+    /// </summary>
     public void AbortMatch(bool silent = false)
     {
-        if (Context == null) return;
-        if (!silent)
+        bool hadMatch = Context != null;
+
+        if (hadMatch && !silent)
         {
             BroadcastAll(" \x02[Match]\x01 Match aborted.");
-            _ = _db.LogMatchEventAsync(Context.Config.MatchId, "match_aborted");
+            _ = _db.LogMatchEventAsync(Context!.Config.MatchId, "match_aborted");
         }
+
+        // Sub-manager state reset — previously these held stale config
+        // references across aborts, which caused ghost !ready votes and
+        // leftover unpause votes to carry into the next match.
+        _readyManager.Reset();
+        _pauseManager.Reset();
         _enforcement.Clear();
+
+        // Drop any active server-side pause so cfg execs and restartgame
+        // actually take effect on the next frame. Harmless no-op if the
+        // match wasn't paused.
+        Server.ExecuteCommand("mp_unpause_match");
+        Server.ExecuteCommand("mp_warmup_pausetimer 0");
+
         Context = null;
+
+        if (hadMatch)
+            Console.WriteLine("[CS2Match] AbortMatch: full state reset complete");
     }
 
     // -------------------------------------------------------------------------

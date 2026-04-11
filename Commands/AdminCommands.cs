@@ -40,6 +40,28 @@ public class AdminCommands
             return;
         }
 
+        // FORCE-OVERRIDE policy: ser_plug_load_url NEVER rejects an active
+        // match. If a new URL arrives while a match is live, warmup, paused,
+        // or even mid-knife-round, we treat it as highest priority, tear
+        // down state, and replace it with the new config. This lets match
+        // coordinators re-push a corrected config without needing to SSH in
+        // and rcon an abort first.
+        var activeCtx = _matchManager.Context;
+        if (activeCtx != null)
+        {
+            Console.WriteLine(
+                $"[CS2Match] ser_plug_load_url: FORCE-OVERRIDE — active match " +
+                $"(id={activeCtx.Config.MatchId}, state={activeCtx.State}) will be " +
+                $"replaced by new config from {url}");
+            info.ReplyToCommand(
+                $"[CS2Match] Active match detected (state={activeCtx.State}). " +
+                $"Force-overriding with new config...");
+        }
+        else
+        {
+            Console.WriteLine($"[CS2Match] ser_plug_load_url: loading fresh config from {url} (no active match)");
+        }
+
         info.ReplyToCommand($"[CS2Match] Loading match config from: {url}");
         _ = _matchManager.LoadMatchFromUrlAsync(url, msg => info.ReplyToCommand($"[CS2Match] {msg}"));
     }

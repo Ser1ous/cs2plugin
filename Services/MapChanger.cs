@@ -13,10 +13,17 @@ public class MapChanger
     }
 
     /// <summary>
-    /// Changes the map and sets game_type/game_mode immediately before the
-    /// transition command so CS2 reads the correct values in ExecGameTypeCfg.
+    /// Changes the map after a small delay so the engine has time to
+    /// flush any in-flight commands.
+    ///
+    /// Two outcomes:
+    ///   1. Already on the requested map → mp_restartgame (cheap path).
+    ///   2. Different map                → changelevel / host_workshop_map.
+    ///
+    /// Workshop-aware: numeric (ulong-parseable) names go through
+    /// <c>host_workshop_map</c>, named maps via <c>changelevel</c>.
     /// </summary>
-    public void ChangeMap(string mapName, int gameType = 0, int gameMode = 0)
+    public void ChangeMap(string mapName)
     {
         if (string.IsNullOrWhiteSpace(mapName))
         {
@@ -26,37 +33,31 @@ public class MapChanger
 
         _plugin.AddTimer(0.5f, () =>
         {
-            // Set game_type/game_mode immediately before the transition so there
-            // is no window for CS2 to reset them. ExecGameTypeCfg reads these
-            // ConVars at the moment of changelevel/mp_restartgame.
-            Server.ExecuteCommand($"game_type {gameType}");
-            Server.ExecuteCommand($"game_mode {gameMode}");
-
             bool alreadyOnMap = string.Equals(Server.MapName, mapName, StringComparison.OrdinalIgnoreCase);
+            bool isWorkshop   = ulong.TryParse(mapName, out _);
 
             if (alreadyOnMap)
             {
-                Console.WriteLine($"[CS2Match] Already on {mapName}, using mp_restartgame instead of changelevel");
+                Console.WriteLine(
+                    $"[CS2Match] Already on {mapName}, using mp_restartgame instead of changelevel");
                 Server.ExecuteCommand("mp_restartgame 3");
 
                 _plugin.AddTimer(4.0f, () =>
                 {
                     Server.ExecuteCommand($"host_say [CS2Match] Map restarted: {mapName}");
                 });
+                return;
+            }
+
+            if (isWorkshop)
+            {
+                Console.WriteLine($"[CS2Match] Loading workshop map: {mapName}");
+                Server.ExecuteCommand($"host_workshop_map {mapName}");
             }
             else
             {
-                bool isWorkshop = ulong.TryParse(mapName, out _);
-                if (isWorkshop)
-                {
-                    Console.WriteLine($"[CS2Match] Loading workshop map: {mapName}");
-                    Server.ExecuteCommand($"host_workshop_map {mapName}");
-                }
-                else
-                {
-                    Console.WriteLine($"[CS2Match] Changing map to: {mapName}");
-                    Server.ExecuteCommand($"changelevel {mapName}");
-                }
+                Console.WriteLine($"[CS2Match] Changing map to: {mapName}");
+                Server.ExecuteCommand($"changelevel {mapName}");
             }
         });
     }

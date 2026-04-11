@@ -19,15 +19,9 @@ public class PluginConfig : BasePluginConfig
     // Minimum players per team required to start (0 = use match config value)
     public int MinPlayersToStart { get; set; } = 0;
 
-    // Game mode applied before match map load so CS2 initialises the correct
-    // game rules (scoreboard, HUD) at startup.
-    // game_type 0 + game_mode 1 = Competitive
-    // game_type 0 + game_mode 2 = Premier
-    public int GameType { get; set; } = 0;
-    public int GameMode { get; set; } = 1;
-
-    // Game mode applied before AIM map load.
-    // game_type 0 + game_mode 1 = Competitive
-    public int AimGameType { get; set; } = 0;
-    public int AimGameMode { get; set; } = 1;
+    // Optional outbound webhooks. Empty string disables the call.
+    //   RoundEndWebhookUrl — POST {"lobby":"<matchId>","round":<round>}  after every live round.
+    //   MapEndWebhookUrl   — POST {"lobby":"<matchId>"}                  after every map end.
+    public string RoundEndWebhookUrl { get; set; } = "";
+    public string MapEndWebhookUrl   { get; set; } = "";
 }

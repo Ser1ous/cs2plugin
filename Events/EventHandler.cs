@@ -681,8 +681,39 @@ public class PluginEventHandler
         if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
 
         var ctx = _matchManager.Context;
-        // AIM mode — let the player join freely
-        if (ctx == null) return HookResult.Continue;
+        // AIM mode — let the player join freely, but make sure the
+        // AIM cfg has actually been executed (idempotent) AND force
+        // mp_freezetime 2 right now so the FIRST round the player
+        // sees uses the 2s freeze, not whatever the server booted with.
+        //
+        // Problem we're solving: when the AIM map loads on an empty
+        // server, no RoundStart fires (there's nobody to spawn), so
+        // OnFirstRoundStart → EnsureAimApplied never runs. The player
+        // connects, spawns, the first round begins using the stale
+        // mp_freezetime (typically 15s). We fix that here by running
+        // the cfg the instant anyone shows up, before their first round.
+        if (ctx == null)
+        {
+            var mapName = CounterStrikeSharp.API.Server.MapName;
+            if (_matchManager.AimManager.IsAimMap(mapName))
+            {
+                // Defence in depth: clear any leftover pause state from a
+                // prior session before applying the AIM cfg. Cheap, idempotent.
+                _matchManager.AimManager.ForceAimUnpauseSequence();
+
+                // Apply the AIM cfg the instant anyone shows up so the very
+                // first round they see uses mp_freezetime 2, not whatever the
+                // server booted with. EnsureAimApplied is idempotent — only
+                // the first connect on a given map actually runs the cfg.
+                bool justApplied = _matchManager.AimManager.EnsureAimApplied();
+                if (justApplied)
+                {
+                    _matchManager.AimManager.ForceAimFreezetimeNow();
+                    CounterStrikeSharp.API.Server.ExecuteCommand("mp_restartgame 1");
+                }
+            }
+            return HookResult.Continue;
+        }
 
         var enforcement = _matchManager.Enforcement;
 
