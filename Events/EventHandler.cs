@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Commands;
@@ -277,9 +278,20 @@ public class PluginEventHandler
         string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
         _matchManager.RecordBombPlant(player.SteamID, player.PlayerName, cfgTeam, teamName, round);
 
+        // Persist planter SteamID + name on the round event so analytics
+        // can attribute the plant without scanning the player tables.
+        // JsonSerializer handles names with quotes/backslashes safely.
+        string planterJson = JsonSerializer.Serialize(new
+        {
+            planter_id = player.SteamID.ToString(),
+            planter    = player.PlayerName,
+            team       = teamName
+        });
+
         _ = _db.LogRoundEventAsync(new RoundEventData(
             ctx.Config.MatchId, round, "bomb_planted",
-            ctx.Team1Score, ctx.Team2Score, null));
+            ctx.Team1Score, ctx.Team2Score, null,
+            planterJson));
 
         return HookResult.Continue;
     }
@@ -299,11 +311,16 @@ public class PluginEventHandler
 
         int attempts = _matchManager.GetDefuseAttempts(player.SteamID);
         float timeLeft = _matchManager.GetBombTimeLeft();
+        // Kit status is captured at defuse-begin via OnBombBeginDefuse and
+        // snapshot on the context (EventBombDefused itself does not expose
+        // Haskit), so we read ctx.LastDefuserHasKit here.
+        bool hasKit = ctx.LastDefuserHasKit;
         _ = _db.LogRoundEventAsync(new RoundEventData(
             ctx.Config.MatchId, round, "bomb_defused",
             ctx.Team1Score, ctx.Team2Score, null,
             $"{{\"defuser\":\"{player.PlayerName}\",\"steam_id\":\"{player.SteamID}\"," +
-            $"\"attempts\":{attempts},\"time_left\":{timeLeft:F2}}}"));
+            $"\"attempts\":{attempts},\"time_left\":{timeLeft:F2}," +
+            $"\"has_kit\":{(hasKit ? "true" : "false")}}}"));
 
         return HookResult.Continue;
     }
@@ -314,7 +331,10 @@ public class PluginEventHandler
         if (ctx?.State != MatchState.Live) return HookResult.Continue;
         var player = @event.Userid;
         if (player == null || !player.IsValid) return HookResult.Continue;
-        _matchManager.RecordDefuseAttempt(player.SteamID);
+
+        // Pass name + kit through so MatchManager can snapshot the most
+        // recent attempt for the bomb_exploded post-mortem.
+        _matchManager.RecordDefuseAttempt(player.SteamID, player.PlayerName, @event.Haskit);
         return HookResult.Continue;
     }
 
@@ -325,10 +345,25 @@ public class PluginEventHandler
 
         int round = _matchManager.GetCurrentRound();
         int attempts = _matchManager.GetTotalDefuseAttempts();
+        var last = _matchManager.GetLastDefuserAtExplosion();
+
+        // If anyone tried defusing this round, attach their identity + the
+        // "needed N more seconds" delta. Otherwise just log the explosion.
+        object payload = last.steamId == 0
+            ? (object)new { defuse_attempts = attempts }
+            : new
+              {
+                  defuse_attempts = attempts,
+                  defuser         = last.name,
+                  steam_id        = last.steamId.ToString(),
+                  has_kit         = last.hasKit,
+                  seconds_needed  = Math.Round(last.secondsNeeded, 2)
+              };
+
         _ = _db.LogRoundEventAsync(new RoundEventData(
             ctx.Config.MatchId, round, "bomb_exploded",
             ctx.Team1Score, ctx.Team2Score, null,
-            $"{{\"defuse_attempts\":{attempts}}}"));
+            JsonSerializer.Serialize(payload)));
         return HookResult.Continue;
     }
 

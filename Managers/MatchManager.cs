@@ -1440,7 +1440,11 @@ public class MatchManager
             Context.BombTimerLength = 40f;
         // Reset defuse attempts for this round
         Context.DefuseAttempts.Clear();
-        Context.ActiveDefuser = 0;
+        Context.ActiveDefuser     = 0;
+        Context.LastDefuserSteamId  = 0;
+        Context.LastDefuserName     = "";
+        Context.LastDefuserHasKit   = false;
+        Context.LastDefuseStartTime = 0f;
     }
 
     public void RecordBombDefuse(ulong steamId, string playerName, int configTeam, string teamName, int round)
@@ -1452,7 +1456,7 @@ public class MatchManager
         Context.ActiveDefuser = 0;
     }
 
-    public void RecordDefuseAttempt(ulong steamId)
+    public void RecordDefuseAttempt(ulong steamId, string playerName, bool hasKit)
     {
         if (Context?.State != MatchState.Live) return;
         Context.ActiveDefuser = steamId;
@@ -1461,6 +1465,38 @@ public class MatchManager
         Context.DefuseAttempts[steamId]++;
         if (Context.PlayerStats.TryGetValue(steamId, out var stats))
             stats.DefuseAttempts++;
+
+        // Snapshot the most recent defuse attempt so OnBombExploded can
+        // attribute "needed N more seconds" even if the player aborted.
+        Context.LastDefuserSteamId  = steamId;
+        Context.LastDefuserName     = playerName;
+        Context.LastDefuserHasKit   = hasKit;
+        Context.LastDefuseStartTime = CounterStrikeSharp.API.Server.CurrentTime;
+    }
+
+    /// <summary>
+    /// Last-defuser snapshot used by the bomb_exploded log path. Returns
+    /// (steamId=0, ...) if no defuse attempt was made this round.
+    /// <paramref name="secondsNeeded"/> is how much more time the defuser
+    /// needed to finish at the moment the bomb exploded:
+    ///   secondsNeeded = (startTime + duration) - now
+    /// where duration is 5s with kit / 10s without. Clamped to 0 if the
+    /// defuse should already have completed.
+    /// </summary>
+    public (ulong steamId, string name, bool hasKit, float secondsNeeded) GetLastDefuserAtExplosion()
+    {
+        if (Context == null || Context.LastDefuserSteamId == 0)
+            return (0, "", false, 0f);
+
+        float duration = Context.LastDefuserHasKit ? 5f : 10f;
+        float now      = CounterStrikeSharp.API.Server.CurrentTime;
+        float needed   = (Context.LastDefuseStartTime + duration) - now;
+        if (needed < 0f) needed = 0f;
+
+        return (Context.LastDefuserSteamId,
+                Context.LastDefuserName,
+                Context.LastDefuserHasKit,
+                needed);
     }
 
     public int GetDefuseAttempts(ulong steamId)

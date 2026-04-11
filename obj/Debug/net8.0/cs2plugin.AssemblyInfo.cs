@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CS2MatchPlugin")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5cd7e6b4fa6a7dcb93e51cf35312fb33d428f7f0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+71f92d7a9932fdf48514fdac40f4f0f231cf04d0")]
 [assembly: System.Reflection.AssemblyProductAttribute("CS2MatchPlugin")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CS2MatchPlugin")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

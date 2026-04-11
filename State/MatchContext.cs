@@ -42,6 +42,14 @@ public class MatchContext
     // Which player is currently defusing (steamId), or 0 if none
     public ulong ActiveDefuser { get; set; } = 0;
 
+    // Most recent defuse attempt this round, kept around even if the player
+    // aborts so OnBombExploded can attribute "X needed N more seconds".
+    // SteamId == 0 means no defuse was attempted this round.
+    public ulong LastDefuserSteamId { get; set; } = 0;
+    public string LastDefuserName   { get; set; } = "";
+    public bool   LastDefuserHasKit { get; set; } = false;
+    public float  LastDefuseStartTime { get; set; } = 0f;
+
     // Server time when bomb was planted this round (0 = not planted)
     public float BombPlantTime { get; set; } = 0f;
     // mp_c4timer value (seconds); default 40
