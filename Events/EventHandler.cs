@@ -84,6 +84,9 @@ public class PluginEventHandler
             // Capture equipment values now — this is the only reliable moment
             // (after buying is complete, before movement begins)
             _matchManager.CaptureEquipmentValues();
+
+            // Snapshot engine MatchStats so we can compute per-round deltas at round end
+            _matchManager.SnapshotEngineStats();
         }
         return HookResult.Continue;
     }
@@ -184,8 +187,11 @@ public class PluginEventHandler
         var victim   = @event.Userid;
         var attacker = @event.Attacker;
 
+        // MatchZy-style entity validation: controller + pawn must both be valid
         if (victim == null || !victim.IsValid) return HookResult.Continue;
+        if (victim.PlayerPawn?.Value == null || !victim.PlayerPawn.IsValid) return HookResult.Continue;
         if (attacker == null || !attacker.IsValid || attacker == victim) return HookResult.Continue;
+        if (attacker.PlayerPawn?.Value == null || !attacker.PlayerPawn.IsValid) return HookResult.Continue;
 
         int round = _matchManager.GetCurrentRound();
         string weapon = @event.Weapon ?? "";
@@ -195,29 +201,20 @@ public class PluginEventHandler
         int vCfgTeam  = _matchManager.GetConfigTeamForPlayer(victim.SteamID);
         string vTeamName = _matchManager.GetTeamNameForConfigTeam(vCfgTeam);
 
-        // Friendly fire: notify both parties but skip stat recording entirely.
-        // RecordDamage still needs to be called to keep HP tracking accurate
-        // (a FF hit reduces victim's tracked HP, so the next enemy hit caps correctly).
+        // Friendly fire notification (no HP tracking needed — engine handles damage)
         if (aCfgTeam != 0 && aCfgTeam == vCfgTeam)
         {
             if (@event.DmgHealth > 0)
             {
-                // Show actual HP lost, not raw overkill damage, for accurate feedback.
-                int ffActual = Math.Min(@event.DmgHealth, victim.PlayerPawn?.Value?.Health + @event.DmgHealth ?? @event.DmgHealth);
                 attacker.PrintToChat(
-                    $" \x07[FF]\x01 You dealt \x02{ffActual}\x01 damage to \x09{victim.PlayerName}\x01 with \x0B{weapon}\x01");
+                    $" \x07[FF]\x01 You dealt \x02{@event.DmgHealth}\x01 damage to \x09{victim.PlayerName}\x01 with \x0B{weapon}\x01");
                 victim.PrintToChat(
-                    $" \x07[FF]\x01 \x09{attacker.PlayerName}\x01 dealt \x02{ffActual}\x01 damage to you with \x0B{weapon}\x01");
+                    $" \x07[FF]\x01 \x09{attacker.PlayerName}\x01 dealt \x02{@event.DmgHealth}\x01 damage to you with \x0B{weapon}\x01");
             }
-            // RecordDamage with FF: updates HP tracking but skips stats (enemyDamage=false).
-            _matchManager.RecordDamage(
-                attacker.SteamID, attacker.PlayerName, aCfgTeam, aTeamName,
-                victim.SteamID,   victim.PlayerName,   vCfgTeam, vTeamName,
-                weapon, @event.DmgHealth, @event.DmgArmor, round);
             return HookResult.Continue;
         }
 
-        // Enemy damage — pass raw DmgHealth; RecordDamage caps via HP tracking.
+        // Ensure both players have stats entries (engine provides actual damage at round end)
         _matchManager.RecordDamage(
             attacker.SteamID, attacker.PlayerName, aCfgTeam, aTeamName,
             victim.SteamID,   victim.PlayerName,   vCfgTeam, vTeamName,
@@ -374,16 +371,12 @@ public class PluginEventHandler
     // Shots fired / economy
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Engine MatchStats tracks ShotsFiredTotal — no manual counting needed.
+    /// Kept as a no-op in case it's registered as an event handler.
+    /// </summary>
     public HookResult OnWeaponFire(EventWeaponFire @event, GameEventInfo info)
     {
-        var ctx = _matchManager.Context;
-        if (ctx?.State != MatchState.Live) return HookResult.Continue;
-        var player = @event.Userid;
-        if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
-        int cfgTeam = _matchManager.GetConfigTeamForPlayer(player.SteamID);
-        string teamName = _matchManager.GetTeamNameForConfigTeam(cfgTeam);
-        int round = _matchManager.GetCurrentRound();
-        _matchManager.RecordShotFired(player.SteamID, player.PlayerName, cfgTeam, teamName, round);
         return HookResult.Continue;
     }
 

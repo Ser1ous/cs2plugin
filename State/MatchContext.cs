@@ -74,7 +74,7 @@ public class MatchContext
     // Clutch: the last surviving player on their team vs N enemies
     // 0 = no clutch in progress
     public ulong ClutchPlayerId   { get; set; } = 0;
-    public int   ClutchSituation  { get; set; } = 0;  // 1 = 1v1, 2 = 1v2
+    public int   ClutchSituation  { get; set; } = 0;  // 1 = 1v1, 2 = 1v2, 3 = 1v3, 4 = 1v4, 5 = 1v5
     public int   ClutchPlayerConfigTeam { get; set; } = 0;
 
     // Util success: tracks which players already scored a util hit this round
@@ -85,10 +85,9 @@ public class MatchContext
     // (prevents counting each blinded enemy as a separate flash success)
     public HashSet<ulong> RoundFlashSucceeded { get; set; } = new();
 
-    // Per-player HP tracking — set to 100 on spawn, decremented on every player_hurt.
-    // Used to compute actual health lost (caps overkill damage correctly for stats).
-    // Updated for ALL damage (FF and enemy) so enemy stats stay accurate after FF hits.
-    public Dictionary<ulong, int> PlayerCurrentHp { get; set; } = new();
+    // Per-player snapshots of engine MatchStats at round start (freeze end).
+    // Used to compute per-round deltas at round end.
+    public Dictionary<ulong, EngineStatsSnapshot> EngineSnapshots { get; set; } = new();
 
     // Set to true when the bomb explodes or the round timer ends this round.
     // Kills that occur after either event are tagged after_time_is_out = 1.
@@ -102,84 +101,118 @@ public class PlayerStats
     public int ConfigTeam    { get; set; }
     public string TeamName   { get; set; } = "";
 
-    // --- Core (cumulative) ---
+    // =====================================================================
+    // Engine-sourced stats (overwritten by SyncStatsFromEngine at round end
+    // via player.ActionTrackingServices.MatchStats — MatchZy approach).
+    // Manual accumulation is kept as a fallback in case the pawn is invalid
+    // at flush time, but the engine values are authoritative.
+    // =====================================================================
+
+    // --- Core ---
     public int Kills    { get; set; }
     public int Deaths   { get; set; }
     public int Assists  { get; set; }
     public int Headshots { get; set; }
 
-    // --- Multi-kills (cumulative) ---
+    // --- Multi-kills ---
     public int Kills5k { get; set; }
     public int Kills4k { get; set; }
     public int Kills3k { get; set; }
     public int Kills2k { get; set; }
 
     // --- Damage ---
-    public int DamageDealt   { get; set; }
-    public int DamageTaken   { get; set; }
-    public int HeDamageDealt { get; set; }
-    public int HeDamageTaken { get; set; }
-    public int UtilDamage    { get; set; }   // molotov/incendiary
-    public int ArmorDamage   { get; set; }
-
-    // --- Shots ---
-    public int ShotsFired    { get; set; }   // weapon_fire events
-    public int ShotsOnTarget { get; set; }   // player_hurt events (each hit = 1 shot on target)
-
-    // --- Flash ---
-    public int EnemiesFlashed       { get; set; }
-    public float TotalFlashDuration { get; set; }
-    public int FlashAssists         { get; set; }
-    public int FlashCount           { get; set; }   // flashbangs thrown
-    public int FlashSuccesses       { get; set; }   // flashes that blinded ≥1 enemy
+    public int DamageDealt { get; set; }
+    public int HealthPointsRemovedTotal { get; set; }
+    public int HealthPointsDealtTotal   { get; set; }
 
     // --- Utility ---
-    public int GrenadesThrown   { get; set; }
-    public int UtilSuccesses    { get; set; }  // util grenades that damaged ≥1 enemy
-    public int UtilEnemiesHit   { get; set; }  // total enemies hit by util grenades
+    public int GrenadesThrown   { get; set; }  // utility_count
+    public int UtilDamage       { get; set; }
+    public int UtilSuccesses    { get; set; }
+    public int UtilEnemiesHit   { get; set; }
 
-    // --- Economy ---
-    public int EquipmentValue   { get; set; }  // value at round start (from player_spawn/freeze end)
-    public int MoneySpent       { get; set; }  // money spent buying this round
-    public int MoneyRemaining   { get; set; }  // money left after buying (= money_saved)
-    public int KillReward       { get; set; }  // cash earned from kills this round (cumulative)
-    public int CashEarned       { get; set; }  // total cash earned this match
+    // --- Flash ---
+    public int FlashCount     { get; set; }
+    public int FlashSuccesses { get; set; }
+    public int EnemiesFlashed { get; set; }
 
-    // --- Time alive ---
-    public float LiveTimeSeconds { get; set; }  // total seconds alive across all rounds
-    public float RoundSpawnTime  { get; set; }  // Server time when spawned this round (0 = not alive)
+    // --- Shots ---
+    public int ShotsFired    { get; set; }
+    public int ShotsOnTarget { get; set; }
 
-    // --- Clutch tracking ---
-    public int V1Count { get; set; }  // times entered 1v1
+    // --- Clutch (1v1, 1v2 from engine) ---
+    public int V1Count { get; set; }
     public int V1Wins  { get; set; }
-    public int V2Count { get; set; }  // times entered 1v2
+    public int V2Count { get; set; }
     public int V2Wins  { get; set; }
 
-    // --- Entry frag ---
-    public int EntryCount { get; set; }  // rounds where player got the first kill
-    public int EntryWins  { get; set; }  // of those, rounds the team won
+    // --- Entry ---
+    public int EntryCount { get; set; }
+    public int EntryWins  { get; set; }
+
+    // --- Economy ---
+    public int EquipmentValue { get; set; }
+    public int MoneySaved     { get; set; }
+    public int KillReward     { get; set; }
+    public int CashEarned     { get; set; }
+
+    // --- Time alive ---
+    public int LiveTime { get; set; }  // seconds alive (int, from engine)
 
     // --- MVP ---
     public int Mvps { get; set; }
 
-    // --- Bomb ---
-    public int BombPlants  { get; set; }
-    public int BombDefuses { get; set; }
-    public int DefuseAttempts { get; set; }  // times started defusing (includes failed)
+    // =====================================================================
+    // Manually-tracked stats (NOT available from engine MatchStats)
+    // =====================================================================
 
-    // --- Per-round counters (reset at each round end after flush) ---
+    // --- Bomb ---
+    public int BombPlants     { get; set; }
+    public int BombDefuses    { get; set; }
+    public int DefuseAttempts { get; set; }
+
+    // --- Flash assist ---
+    public int FlashAssists { get; set; }
+
+    // --- Clutch 1v3 / 1v4 / 1v5 (engine only has 1v1 and 1v2) ---
+    public int V3Count { get; set; }
+    public int V3Wins  { get; set; }
+    public int V4Count { get; set; }
+    public int V4Wins  { get; set; }
+    public int V5Count { get; set; }
+    public int V5Wins  { get; set; }
+
+    // --- Spawn time (for round-end live-time delta if engine unavailable) ---
+    public float RoundSpawnTime { get; set; }
+
+    // =====================================================================
+    // Per-round counters (reset after each round flush)
+    // =====================================================================
     public int RoundKills          { get; set; }
     public int RoundDeaths         { get; set; }
-    public int RoundDamageDealt    { get; set; }
+    public int RoundDamageDealt    { get; set; }  // computed from engine delta
     public int RoundHeadshots      { get; set; }
     public int RoundAssists        { get; set; }
     public int RoundEquipmentValue { get; set; }
-    public int RoundStartAccount   { get; set; }  // money at round start (before buying)
-    public int RoundMoneySpent     { get; set; }  // money spent buying this round
-    public int RoundCashEarned     { get; set; }  // cash earned after freeze end (kills + bonus)
-    public bool RoundGotEntry      { get; set; }  // got first kill this round
+    public int RoundStartAccount   { get; set; }
+    public int RoundMoneySpent     { get; set; }
+    public int RoundCashEarned     { get; set; }
+    public bool RoundGotEntry      { get; set; }
 
     // --- Tracking ---
     public int RoundsPlayed { get; set; }
     public int LastRound    { get; set; }
+}
+
+/// <summary>
+/// Snapshot of engine MatchStats values at round start (freeze end).
+/// Used to compute per-round deltas at round end.
+/// </summary>
+public struct EngineStatsSnapshot
+{
+    public int Damage;
+    public int Kills;
+    public int Deaths;
+    public int Assists;
+    public int HeadShotKills;
 }

@@ -724,16 +724,9 @@ public class MatchManager
             Context.Team1Score, Context.Team2Score, "live",
             Context.Config.Maplist[Context.CurrentMapIndex], Context.CurrentMapIndex + 1);
 
-        // Accumulate live time for alive players before the round ends
-        float now = CounterStrikeSharp.API.Server.CurrentTime;
+        // Clear spawn times (engine LiveTime is authoritative; read in SyncStatsFromEngine)
         foreach (var stats in Context.PlayerStats.Values)
-        {
-            if (stats.RoundSpawnTime > 0f)
-            {
-                stats.LiveTimeSeconds += now - stats.RoundSpawnTime;
-                stats.RoundSpawnTime = 0f;
-            }
-        }
+            stats.RoundSpawnTime = 0f;
         // Reset per-round bomb tracking
         Context.BombPlantTime = 0f;
         Context.DefuseAttempts.Clear();
@@ -763,8 +756,14 @@ public class MatchManager
                                  (Context.Team2Side == TeamSide.Terrorist        && winnerTeamNum == (int)TeamSide.Terrorist)));
             if (clutcherWon)
             {
-                if (Context.ClutchSituation == 1) clutchStats.V1Wins++;
-                else clutchStats.V2Wins++;
+                switch (Context.ClutchSituation)
+                {
+                    case 1: clutchStats.V1Wins++; break;
+                    case 2: clutchStats.V2Wins++; break;
+                    case 3: clutchStats.V3Wins++; break;
+                    case 4: clutchStats.V4Wins++; break;
+                    case 5: clutchStats.V5Wins++; break;
+                }
             }
         }
 
@@ -773,6 +772,9 @@ public class MatchManager
 
         // Categorise this round's multi-kills before flushing (resets RoundKills)
         ProcessRoundMultiKills();
+
+        // Sync authoritative stats from engine MatchStats (MatchZy approach)
+        SyncStatsFromEngine(round);
 
         // Flush cumulative scoreboard and per-round player stats
         FlushScoreboard(round);
@@ -1120,11 +1122,10 @@ public class MatchManager
                 stats.PlayerName,
                 stats.ConfigTeam,
                 stats.TeamName,
-                // Core
+                // Core (from engine via SyncStatsFromEngine)
                 stats.Kills,
                 stats.Deaths,
                 stats.DamageDealt,
-                stats.DamageTaken,
                 stats.Assists,
                 // Multi-kills
                 stats.Kills5k,
@@ -1139,19 +1140,25 @@ public class MatchManager
                 // Flash
                 stats.FlashCount,
                 stats.FlashSuccesses,
+                // Engine HP totals
+                stats.HealthPointsRemovedTotal,
+                stats.HealthPointsDealtTotal,
                 // Shots
                 stats.ShotsFired,
                 stats.ShotsOnTarget,
                 // Clutch
                 stats.V1Count, stats.V1Wins,
                 stats.V2Count, stats.V2Wins,
+                stats.V3Count, stats.V3Wins,
+                stats.V4Count, stats.V4Wins,
+                stats.V5Count, stats.V5Wins,
                 // Entry
                 stats.EntryCount, stats.EntryWins,
                 // Economy
                 stats.EquipmentValue,
-                stats.MoneyRemaining,   // money_saved = money left after buying
+                stats.MoneySaved,
                 stats.KillReward,
-                (int)stats.LiveTimeSeconds,
+                stats.LiveTime,
                 // Kill quality
                 stats.Headshots,
                 stats.CashEarned,
@@ -1164,6 +1171,121 @@ public class MatchManager
                 round,
                 stats.Mvps
             ));
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Engine stats sync (MatchZy approach)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Snapshots each player's engine MatchStats at the start of the round
+    /// (called from OnRoundFreezeEnd). Deltas at round end give per-round values.
+    /// </summary>
+    public void SnapshotEngineStats()
+    {
+        if (Context?.State != MatchState.Live) return;
+        Context.EngineSnapshots.Clear();
+
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (!player.IsValid || player.IsBot) continue;
+            if (player.ActionTrackingServices?.MatchStats is not { } ms) continue;
+            Context.EngineSnapshots[player.SteamID] = new EngineStatsSnapshot
+            {
+                Damage        = ms.Damage,
+                Kills         = ms.Kills,
+                Deaths        = ms.Deaths,
+                Assists       = ms.Assists,
+                HeadShotKills = ms.HeadShotKills,
+            };
+        }
+    }
+
+    /// <summary>
+    /// Reads authoritative cumulative stats from the engine's
+    /// ActionTrackingServices.MatchStats for every tracked player,
+    /// overwriting the manually-accumulated values in PlayerStats.
+    /// This is the core of the MatchZy approach: the engine handles
+    /// overkill capping, round boundaries, and death state correctly.
+    /// Call at round end BEFORE FlushScoreboard / FlushRoundPlayers.
+    /// </summary>
+    private void SyncStatsFromEngine(int round)
+    {
+        if (Context == null) return;
+
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (!player.IsValid || player.IsBot) continue;
+            if (!Context.PlayerStats.TryGetValue(player.SteamID, out var stats)) continue;
+            if (player.ActionTrackingServices?.MatchStats is not { } ms) continue;
+
+            // Snapshot from round start (for per-round deltas)
+            var snap = Context.EngineSnapshots.GetValueOrDefault(player.SteamID);
+
+            // --- Per-round deltas (compute BEFORE overwriting cumulative) ---
+            stats.RoundDamageDealt = ms.Damage        - snap.Damage;
+            stats.RoundDeaths      = ms.Deaths        - snap.Deaths;
+            stats.RoundHeadshots   = ms.HeadShotKills - snap.HeadShotKills;
+            stats.RoundAssists     = ms.Assists       - snap.Assists;
+            // RoundKills is already tracked manually via RecordKill
+
+            // --- Core (cumulative, authoritative) ---
+            stats.Kills    = ms.Kills;
+            stats.Deaths   = ms.Deaths;
+            stats.Assists  = ms.Assists;
+            stats.Headshots = ms.HeadShotKills;
+
+            // --- Damage ---
+            stats.DamageDealt = ms.Damage;
+            // HealthPointsRemovedTotal / HealthPointsDealtTotal use ref-return
+            // signatures that vary by server CSS version — left at 0 (DB column exists
+            // but will show 0 until a compatible CSS version is confirmed).
+
+            // --- Multi-kills ---
+            stats.Kills2k = ms.Enemy2Ks;
+            stats.Kills3k = ms.Enemy3Ks;
+            stats.Kills4k = ms.Enemy4Ks;
+            stats.Kills5k = ms.Enemy5Ks;
+
+            // --- Entry ---
+            stats.EntryCount = ms.EntryCount;
+            stats.EntryWins  = ms.EntryWins;
+
+            // --- Clutch (1v1, 1v2 from engine; 1v3+ tracked manually) ---
+            stats.V1Count = ms.I1v1Count;
+            stats.V1Wins  = ms.I1v1Wins;
+            stats.V2Count = ms.I1v2Count;
+            stats.V2Wins  = ms.I1v2Wins;
+
+            // --- Utility ---
+            stats.GrenadesThrown = ms.Utility_Count;
+            stats.UtilDamage     = ms.UtilityDamage;
+            stats.UtilSuccesses  = ms.Utility_Successes;
+            stats.UtilEnemiesHit = ms.Utility_Enemies;
+
+            // --- Flash ---
+            stats.FlashCount     = ms.Flash_Count;
+            stats.FlashSuccesses = ms.Flash_Successes;
+            stats.EnemiesFlashed = ms.EnemiesFlashed;
+
+            // --- Shots ---
+            stats.ShotsFired    = ms.ShotsFiredTotal;
+            stats.ShotsOnTarget = ms.ShotsOnTargetTotal;
+
+            // --- Economy ---
+            stats.EquipmentValue = ms.EquipmentValue;
+            stats.MoneySaved     = ms.MoneySaved;
+            stats.KillReward     = ms.KillReward;
+            stats.CashEarned     = ms.CashEarned;
+
+            // --- Time & MVP ---
+            stats.LiveTime = ms.LiveTime;
+            stats.Mvps     = player.MVPs;
+
+            // --- Tracking ---
+            stats.RoundsPlayed = round;
+            stats.LastRound    = round;
         }
     }
 
@@ -1251,59 +1373,66 @@ public class MatchManager
         if (attackerSteamId != 0 && attackerSteamId != victimSteamId)
         {
             var aStats = GetOrCreateStats(attackerSteamId, attackerName, attackerConfigTeam, attackerTeamName);
-            aStats.Kills++;
+            // RoundKills is needed for multi-kill categorisation at round end
             aStats.RoundKills++;
-            if (headshot) { aStats.Headshots++; aStats.RoundHeadshots++; }
-            aStats.RoundsPlayed = round;
 
-            // Entry frag: first kill of the round
+            // Entry frag tracking (context-level, for round-end win crediting)
             if (Context.EntryKillerThisRound == 0)
             {
                 Context.EntryKillerThisRound  = attackerSteamId;
                 Context.EntryKillerConfigTeam = attackerConfigTeam;
-                aStats.EntryCount++;
                 aStats.RoundGotEntry = true;
             }
         }
 
-        var vStats = GetOrCreateStats(victimSteamId, victimName, victimConfigTeam, victimTeamName);
-        vStats.Deaths++;
-        vStats.RoundDeaths++;
-        vStats.RoundsPlayed = round;
+        // Ensure victim has a stats entry (engine sync fills cumulative Deaths)
+        GetOrCreateStats(victimSteamId, victimName, victimConfigTeam, victimTeamName);
 
-        // Clutch detection: check if one side is now alone vs multiple enemies
+        // Clutch detection: check if one side is now alone vs N enemies
         CheckClutch();
     }
 
     private void CheckClutch()
     {
         if (Context == null) return;
+        if (Context.ClutchPlayerId != 0) return; // already tracking a clutch this round
+
         int alive1 = Context.AliveTeam1.Count;
         int alive2 = Context.AliveTeam2.Count;
 
-        // 1vN situation: one side has exactly 1 player, other has 1 or 2
-        if (alive1 == 1 && alive2 is 1 or 2 && Context.ClutchPlayerId == 0)
+        // 1vN situation: one side has exactly 1 player, other has 1–5
+        ulong clutcher = 0;
+        int opponents = 0;
+        int clutcherConfigTeam = 0;
+
+        if (alive1 == 1 && alive2 >= 1 && alive2 <= 5)
         {
-            ulong clutcher = Context.AliveTeam1.First();
-            Context.ClutchPlayerId         = clutcher;
-            Context.ClutchSituation        = alive2;
-            Context.ClutchPlayerConfigTeam = 1;
-            if (Context.PlayerStats.TryGetValue(clutcher, out var cs))
-            {
-                if (alive2 == 1) cs.V1Count++;
-                else cs.V2Count++;
-            }
+            clutcher = Context.AliveTeam1.First();
+            opponents = alive2;
+            clutcherConfigTeam = 1;
         }
-        else if (alive2 == 1 && alive1 is 1 or 2 && Context.ClutchPlayerId == 0)
+        else if (alive2 == 1 && alive1 >= 1 && alive1 <= 5)
         {
-            ulong clutcher = Context.AliveTeam2.First();
-            Context.ClutchPlayerId         = clutcher;
-            Context.ClutchSituation        = alive1;
-            Context.ClutchPlayerConfigTeam = 2;
-            if (Context.PlayerStats.TryGetValue(clutcher, out var cs))
+            clutcher = Context.AliveTeam2.First();
+            opponents = alive1;
+            clutcherConfigTeam = 2;
+        }
+
+        if (clutcher == 0) return;
+
+        Context.ClutchPlayerId         = clutcher;
+        Context.ClutchSituation        = opponents;
+        Context.ClutchPlayerConfigTeam = clutcherConfigTeam;
+
+        if (Context.PlayerStats.TryGetValue(clutcher, out var cs))
+        {
+            switch (opponents)
             {
-                if (alive1 == 1) cs.V1Count++;
-                else cs.V2Count++;
+                case 1: cs.V1Count++; break;
+                case 2: cs.V2Count++; break;
+                case 3: cs.V3Count++; break;
+                case 4: cs.V4Count++; break;
+                case 5: cs.V5Count++; break;
             }
         }
     }
@@ -1312,16 +1441,17 @@ public class MatchManager
                              bool flashAssist, int round)
     {
         if (Context?.State != MatchState.Live) return;
+        // Engine MatchStats provides cumulative Assists; only FlashAssists is manual.
+        if (!flashAssist) return;
         var stats = GetOrCreateStats(assistSteamId, assistName, configTeam, teamName);
-        stats.Assists++;
-        stats.RoundAssists++;
-        if (flashAssist) stats.FlashAssists++;
-        stats.RoundsPlayed = round;
+        stats.FlashAssists++;
     }
 
     /// <summary>
-    /// Called from EventPlayerHurt — tracks all damage dealt/taken (enemy only for ADR).
-    /// Also used for Faceit-style FF detection (caller checks AreSameConfigTeam).
+    /// Called from EventPlayerHurt — ensures both attacker and victim have stats entries.
+    /// All cumulative damage values (DamageDealt, UtilDamage, ShotsOnTarget, etc.) are
+    /// read from the engine's ActionTrackingServices.MatchStats at round end by
+    /// SyncStatsFromEngine() (MatchZy approach). No manual HP tracking is needed.
     /// </summary>
     public void RecordDamage(
         ulong attackerSteamId, string attackerName, int attackerConfigTeam, string attackerTeamName,
@@ -1330,100 +1460,38 @@ public class MatchManager
     {
         if (Context?.State != MatchState.Live) return;
 
-        // Compute actual health lost using per-player HP tracking.
-        // dmgHealth is raw weapon damage and can exceed remaining HP (overkill).
-        // We track HP ourselves because player_hurt fires post-damage and
-        // event.Health is clamped to 0 on kill shots, making pre-HP unrecoverable
-        // from the event alone.
-        // HP is updated for ALL damage (FF and enemy) so that a FF hit followed
-        // by an enemy hit still produces the correct actual-damage for the enemy.
-        int actualDmgHealth;
-        if (Context.PlayerCurrentHp.TryGetValue(victimSteamId, out int trackedHp))
-        {
-            actualDmgHealth = Math.Min(dmgHealth, trackedHp);
-            Context.PlayerCurrentHp[victimSteamId] = Math.Max(0, trackedHp - dmgHealth);
-        }
-        else
-        {
-            // Fallback: player spawned before tracking was seeded (e.g. hot-reload).
-            actualDmgHealth = Math.Min(dmgHealth, 100);
-        }
-
-        bool enemyDamage = attackerConfigTeam != 0 && victimConfigTeam != 0
-                        && attackerConfigTeam != victimConfigTeam;
-
-        // Friendly fire: HP tracking updated above, but stats are not recorded.
-        if (!enemyDamage) return;
-
-        bool isHe   = weapon.Contains("hegrenade",    StringComparison.OrdinalIgnoreCase);
-        bool isUtil = weapon.Contains("molotov",       StringComparison.OrdinalIgnoreCase) ||
-                      weapon.Contains("incgrenade",    StringComparison.OrdinalIgnoreCase) ||
-                      weapon.Contains("inferno",       StringComparison.OrdinalIgnoreCase);
-
-        if (attackerSteamId != 0 && attackerSteamId != victimSteamId)
-        {
-            var aStats = GetOrCreateStats(attackerSteamId, attackerName, attackerConfigTeam, attackerTeamName);
-            aStats.DamageDealt      += actualDmgHealth;
-            aStats.RoundDamageDealt += actualDmgHealth;
-            aStats.ArmorDamage      += dmgArmor;
-            if (isHe) aStats.HeDamageDealt += actualDmgHealth;
-            if (isUtil)
-            {
-                aStats.UtilDamage += actualDmgHealth;
-                aStats.UtilEnemiesHit++;
-                // Count a util success only once per throw per round
-                if (Context.RoundUtilSucceeded.Add(attackerSteamId))
-                    aStats.UtilSuccesses++;
-            }
-            // Each player_hurt from a bullet = one shot that connected
-            bool isBullet = !isHe && !isUtil && !weapon.Contains("knife", StringComparison.OrdinalIgnoreCase);
-            if (isBullet) aStats.ShotsOnTarget++;
-            aStats.RoundsPlayed = round;
-        }
-
-        var vStats = GetOrCreateStats(victimSteamId, victimName, victimConfigTeam, victimTeamName);
-        vStats.DamageTaken += actualDmgHealth;
-        if (isHe) vStats.HeDamageTaken += actualDmgHealth;
-        vStats.RoundsPlayed = round;
+        // Ensure both players have stats entries so SyncStatsFromEngine can find them
+        if (attackerSteamId != 0)
+            GetOrCreateStats(attackerSteamId, attackerName, attackerConfigTeam, attackerTeamName);
+        GetOrCreateStats(victimSteamId, victimName, victimConfigTeam, victimTeamName);
     }
 
     /// <summary>
-    /// Called from EventPlayerBlind — only counts flashing an enemy.
+    /// Called from EventPlayerBlind — engine MatchStats tracks EnemiesFlashed,
+    /// FlashCount, FlashSuccesses cumulatively. This is now a no-op; kept for
+    /// API compatibility with EventHandler.
     /// </summary>
     public void RecordFlash(
         ulong flasherSteamId, string flasherName, int flasherConfigTeam, string flasherTeamName,
         int victimConfigTeam, float duration, int round)
     {
-        if (Context?.State != MatchState.Live) return;
-        // Only enemies count
-        if (flasherConfigTeam == 0 || victimConfigTeam == 0 || flasherConfigTeam == victimConfigTeam) return;
-
-        var stats = GetOrCreateStats(flasherSteamId, flasherName, flasherConfigTeam, flasherTeamName);
-        stats.EnemiesFlashed++;
-        stats.TotalFlashDuration += duration;
-        // FlashSuccesses = number of throws that blinded ≥1 enemy (deduplicated per round)
-        if (Context.RoundFlashSucceeded.Add(flasherSteamId))
-            stats.FlashSuccesses++;
-        stats.RoundsPlayed = round;
+        // Engine MatchStats provides all flash stats — SyncStatsFromEngine reads them.
     }
 
+    /// <summary>
+    /// Engine MatchStats provides Utility_Count, Flash_Count — no-op.
+    /// </summary>
     public void RecordGrenade(ulong steamId, string playerName, int configTeam, string teamName, int round, string weapon)
     {
-        if (Context?.State != MatchState.Live) return;
-        var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
-        bool isFlash = weapon.Contains("flashbang", StringComparison.OrdinalIgnoreCase);
-        if (isFlash)
-            stats.FlashCount++;
-        else
-            stats.GrenadesThrown++;  // utility_count = non-flash grenades (HE, molotov, smoke, etc.)
-        stats.RoundsPlayed = round;
+        // Engine MatchStats provides all grenade stats — SyncStatsFromEngine reads them.
     }
 
+    /// <summary>
+    /// Engine provides player.MVPs — no-op; SyncStatsFromEngine reads it.
+    /// </summary>
     public void RecordMvp(ulong steamId, string playerName, int configTeam, string teamName)
     {
-        if (Context?.State != MatchState.Live) return;
-        var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
-        stats.Mvps++;
+        // Engine provides MVPs directly — SyncStatsFromEngine reads player.MVPs.
     }
 
     public void RecordBombPlant(ulong steamId, string playerName, int configTeam, string teamName, int round)
@@ -1523,34 +1591,15 @@ public class MatchManager
         return remaining < 0f ? 0f : remaining;
     }
 
-    public void RecordShotFired(ulong steamId, string playerName, int configTeam, string teamName, int round)
-    {
-        if (Context?.State != MatchState.Live) return;
-        var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
-        stats.ShotsFired++;
-        stats.RoundsPlayed = round;
-    }
-
-    public void RecordShotOnTarget(ulong steamId)
-    {
-        if (Context?.State != MatchState.Live) return;
-        if (Context.PlayerStats.TryGetValue(steamId, out var stats))
-            stats.ShotsOnTarget++;
-    }
-
     public void RecordPlayerSpawn(ulong steamId, string playerName, int configTeam, string teamName, int round)
     {
         if (Context?.State != MatchState.Live) return;
         var stats = GetOrCreateStats(steamId, playerName, configTeam, teamName);
         stats.RoundSpawnTime = CounterStrikeSharp.API.Server.CurrentTime;
-        stats.RoundsPlayed = round;
 
         // Track alive sets for clutch detection
         if (configTeam == 1) Context.AliveTeam1.Add(steamId);
         else if (configTeam == 2) Context.AliveTeam2.Add(steamId);
-
-        // Seed HP tracking — every player starts each round at 100 HP
-        Context.PlayerCurrentHp[steamId] = 100;
     }
 
     /// <summary>
@@ -1587,12 +1636,10 @@ public class MatchManager
             string teamName = GetTeamNameForConfigTeam(configTeam);
             var stats = GetOrCreateStats(player.SteamID, player.PlayerName, configTeam, teamName);
             stats.RoundEquipmentValue = pawn.CurrentEquipmentValue;
-            stats.EquipmentValue      = pawn.CurrentEquipmentValue;
 
             int accountNow = player.InGameMoneyServices?.Account ?? 0;
-            stats.MoneyRemaining   = accountNow;
+            stats.MoneySaved       = accountNow;  // engine MoneySaved = money left after buying
             stats.RoundMoneySpent  = Math.Max(0, stats.RoundStartAccount - accountNow);
-            stats.MoneySpent      += stats.RoundMoneySpent;
         }
     }
 
@@ -1609,9 +1656,8 @@ public class MatchManager
             int account = player.InGameMoneyServices?.Account ?? 0;
             if (!Context.PlayerStats.TryGetValue(player.SteamID, out var stats)) continue;
             // Cash earned this round = money gained after buying phase ended
-            int earned = Math.Max(0, account - stats.MoneyRemaining);
+            int earned = Math.Max(0, account - stats.MoneySaved);
             stats.RoundCashEarned = earned;
-            stats.CashEarned     += earned;
         }
     }
 
@@ -1635,7 +1681,7 @@ public class MatchManager
         Context.AliveTeam2.Clear();
         Context.RoundUtilSucceeded.Clear();
         Context.RoundFlashSucceeded.Clear();
-        Context.PlayerCurrentHp.Clear();
+        Context.EngineSnapshots.Clear();
         Context.BombExploded = false;
         Context.RoundEnded   = false;
     }

@@ -142,6 +142,12 @@ public class DatabaseService
     v1_wins              INT NOT NULL DEFAULT 0,
     v2_count             INT NOT NULL DEFAULT 0,
     v2_wins              INT NOT NULL DEFAULT 0,
+    v3_count             INT NOT NULL DEFAULT 0,
+    v3_wins              INT NOT NULL DEFAULT 0,
+    v4_count             INT NOT NULL DEFAULT 0,
+    v4_wins              INT NOT NULL DEFAULT 0,
+    v5_count             INT NOT NULL DEFAULT 0,
+    v5_wins              INT NOT NULL DEFAULT 0,
     entry_count          INT NOT NULL DEFAULT 0,
     entry_wins           INT NOT NULL DEFAULT 0,
     equipment_value      INT NOT NULL DEFAULT 0,
@@ -156,6 +162,7 @@ public class DatabaseService
     rounds_played        INT NOT NULL DEFAULT 0,
     last_round           INT NOT NULL DEFAULT 0,
     is_closed            TINYINT(1) NOT NULL DEFAULT 0,
+    mvps                 INT NOT NULL DEFAULT 0,
     updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_match_player (match_id, steamid),
     INDEX idx_match_id (match_id)
@@ -452,6 +459,7 @@ INSERT INTO match_scoreboard
    hp_removed_total, hp_dealt_total,
    shots_fired, shots_on_target,
    v1_count, v1_wins, v2_count, v2_wins,
+   v3_count, v3_wins, v4_count, v4_wins, v5_count, v5_wins,
    entry_count, entry_wins,
    equipment_value, money_saved, kill_reward, live_time,
    headshot_kills, cash_earned, enemies_flashed,
@@ -465,6 +473,7 @@ VALUES
    @hprem,@hpdlt,
    @sf,@sot,
    @v1c,@v1w,@v2c,@v2w,
+   @v3c,@v3w,@v4c,@v4w,@v5c,@v5w,
    @enc,@enw,
    @eqv,@ms,@kr,@lt,
    @hsk,@ce,@ef,
@@ -480,6 +489,9 @@ ON DUPLICATE KEY UPDATE
   shots_fired=VALUES(shots_fired), shots_on_target=VALUES(shots_on_target),
   v1_count=VALUES(v1_count), v1_wins=VALUES(v1_wins),
   v2_count=VALUES(v2_count), v2_wins=VALUES(v2_wins),
+  v3_count=VALUES(v3_count), v3_wins=VALUES(v3_wins),
+  v4_count=VALUES(v4_count), v4_wins=VALUES(v4_wins),
+  v5_count=VALUES(v5_count), v5_wins=VALUES(v5_wins),
   entry_count=VALUES(entry_count), entry_wins=VALUES(entry_wins),
   equipment_value=VALUES(equipment_value), money_saved=VALUES(money_saved),
   kill_reward=VALUES(kill_reward), live_time=VALUES(live_time),
@@ -508,14 +520,20 @@ ON DUPLICATE KEY UPDATE
             cmd.Parameters.AddWithValue("@ue",   r.UtilEnemiesHit);
             cmd.Parameters.AddWithValue("@fc",   r.FlashCount);
             cmd.Parameters.AddWithValue("@fs",   r.FlashSuccesses);
-            cmd.Parameters.AddWithValue("@hprem",r.DamageTaken);
-            cmd.Parameters.AddWithValue("@hpdlt",r.DamageDealt);
+            cmd.Parameters.AddWithValue("@hprem",r.HealthPointsRemovedTotal);
+            cmd.Parameters.AddWithValue("@hpdlt",r.HealthPointsDealtTotal);
             cmd.Parameters.AddWithValue("@sf",   r.ShotsFired);
             cmd.Parameters.AddWithValue("@sot",  r.ShotsOnTarget);
             cmd.Parameters.AddWithValue("@v1c",  r.V1Count);
             cmd.Parameters.AddWithValue("@v1w",  r.V1Wins);
             cmd.Parameters.AddWithValue("@v2c",  r.V2Count);
             cmd.Parameters.AddWithValue("@v2w",  r.V2Wins);
+            cmd.Parameters.AddWithValue("@v3c",  r.V3Count);
+            cmd.Parameters.AddWithValue("@v3w",  r.V3Wins);
+            cmd.Parameters.AddWithValue("@v4c",  r.V4Count);
+            cmd.Parameters.AddWithValue("@v4w",  r.V4Wins);
+            cmd.Parameters.AddWithValue("@v5c",  r.V5Count);
+            cmd.Parameters.AddWithValue("@v5w",  r.V5Wins);
             cmd.Parameters.AddWithValue("@enc",  r.EntryCount);
             cmd.Parameters.AddWithValue("@enw",  r.EntryWins);
             cmd.Parameters.AddWithValue("@eqv",  r.EquipmentValue);
@@ -744,7 +762,6 @@ public record ScoreboardRow(
     int Kills,
     int Deaths,
     int DamageDealt,
-    int DamageTaken,
     int Assists,
     // Multi-kills
     int Kills5k,
@@ -759,19 +776,25 @@ public record ScoreboardRow(
     // Flash
     int FlashCount,
     int FlashSuccesses,
+    // Engine HP totals
+    int HealthPointsRemovedTotal,
+    int HealthPointsDealtTotal,
     // Shots
     int ShotsFired,
     int ShotsOnTarget,
     // Clutch
     int V1Count, int V1Wins,
     int V2Count, int V2Wins,
+    int V3Count, int V3Wins,
+    int V4Count, int V4Wins,
+    int V5Count, int V5Wins,
     // Entry
     int EntryCount, int EntryWins,
     // Economy
     int EquipmentValue,
     int MoneySaved,
     int KillReward,
-    int LiveTime,       // seconds alive (int)
+    int LiveTime,       // seconds alive (int, from engine)
     // Kill quality
     int Headshots,
     int CashEarned,
