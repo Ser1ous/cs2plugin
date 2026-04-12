@@ -1619,6 +1619,11 @@ public class MatchManager
     public void ResetRoundContext()
     {
         if (Context == null) return;
+        // Pin the round number now, before any score changes can happen this round.
+        // GetCurrentRound() reads this field so post-round events (planted_c4 kills,
+        // etc.) that fire after OnRoundEnd has already incremented the scores will
+        // still return the correct round.
+        Context.CurrentRound = Context.Team1Score + Context.Team2Score + 1;
         Context.EntryKillerThisRound   = 0;
         Context.EntryKillerConfigTeam  = 0;
         Context.ClutchPlayerId         = 0;
@@ -1689,7 +1694,15 @@ public class MatchManager
 
     public (int ready, int required) GetReadyStatus() => _readyManager.GetStatus();
 
-    public int GetCurrentRound() => Context == null ? 0 : Context.Team1Score + Context.Team2Score + 1;
+    public int GetCurrentRound()
+    {
+        if (Context == null) return 0;
+        // Use the pinned value set at round-start. Falls back to the score-based
+        // formula only before the very first round (CurrentRound == 0).
+        return Context.CurrentRound > 0
+            ? Context.CurrentRound
+            : Context.Team1Score + Context.Team2Score + 1;
+    }
 
     private static void BroadcastAll(string message)
     {

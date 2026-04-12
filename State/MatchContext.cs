@@ -24,6 +24,12 @@ public class MatchContext
 
     public int Team1Score { get; set; } = 0;
     public int Team2Score { get; set; } = 0;
+
+    // Tracks the current round number. Set at the start of each new round
+    // (in ResetRoundContext) so it stays pinned to the correct round even
+    // after OnRoundEnd increments Team1Score/Team2Score. Post-round events
+    // (e.g. planted_c4 suicide) therefore still read the right round number.
+    public int CurrentRound { get; set; } = 0;
     public int MapWinsTeam1 { get; set; } = 0;
     public int MapWinsTeam2 { get; set; } = 0;
     // Maps that ended in a draw (single-OT rule). Counted toward series
