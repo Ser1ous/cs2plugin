@@ -698,6 +698,8 @@ public class MatchManager
 
         if (Context.State != MatchState.Live) return;
 
+        Context.RoundEnded = true;
+
         // @event.Winner: 2=T, 3=CT
         if (@event.Winner == (int)TeamSide.CounterTerrorist)
         {
@@ -1634,6 +1636,8 @@ public class MatchManager
         Context.RoundUtilSucceeded.Clear();
         Context.RoundFlashSucceeded.Clear();
         Context.PlayerCurrentHp.Clear();
+        Context.BombExploded = false;
+        Context.RoundEnded   = false;
     }
 
     /// <summary>

@@ -89,6 +89,11 @@ public class MatchContext
     // Used to compute actual health lost (caps overkill damage correctly for stats).
     // Updated for ALL damage (FF and enemy) so enemy stats stay accurate after FF hits.
     public Dictionary<ulong, int> PlayerCurrentHp { get; set; } = new();
+
+    // Set to true when the bomb explodes or the round timer ends this round.
+    // Kills that occur after either event are tagged after_time_is_out = 1.
+    public bool BombExploded { get; set; } = false;
+    public bool RoundEnded   { get; set; } = false;
 }
 
 public class PlayerStats

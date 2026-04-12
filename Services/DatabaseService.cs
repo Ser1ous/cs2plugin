@@ -83,6 +83,7 @@ public class DatabaseService
     victim_x                FLOAT,
     victim_y                FLOAT,
     victim_z                FLOAT,
+    after_time_is_out       TINYINT(1) NOT NULL DEFAULT 0,
     created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_match_round (match_id, round)
 )",
@@ -337,7 +338,8 @@ INSERT INTO kill_events
    weapon, headshot, thru_smoke, attacker_blind, no_scope, penetrated, attacker_in_air,
    dmg_health, dmg_armor,
    attacker_x, attacker_y, attacker_z,
-   victim_x,   victim_y,   victim_z)
+   victim_x,   victim_y,   victim_z,
+   after_time_is_out)
 VALUES
   (@mid, @round,
    @asid, @aname, @ateam,
@@ -346,7 +348,8 @@ VALUES
    @weapon, @hs, @smoke, @blind, @noscope, @pen, @air,
    @dmgh, @dmga,
    @ax, @ay, @az,
-   @vx, @vy, @vz)", conn);
+   @vx, @vy, @vz,
+   @aftertime)", conn);
 
             cmd.Parameters.AddWithValue("@mid",    d.MatchId);
             cmd.Parameters.AddWithValue("@round",  d.Round);
@@ -371,9 +374,10 @@ VALUES
             cmd.Parameters.AddWithValue("@ax",     (object?)d.AttackerX ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@ay",     (object?)d.AttackerY ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@az",     (object?)d.AttackerZ ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@vx",     (object?)d.VictimX ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@vy",     (object?)d.VictimY ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@vz",     (object?)d.VictimZ ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@vx",        (object?)d.VictimX ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@vy",        (object?)d.VictimY ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@vz",        (object?)d.VictimZ ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@aftertime", d.AfterTimeIsOut ? 1 : 0);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB LogKill: {ex.Message}"); }
@@ -707,7 +711,8 @@ public record KillEventData(
     int DmgHealth,
     int DmgArmor,
     float? AttackerX, float? AttackerY, float? AttackerZ,
-    float? VictimX,   float? VictimY,   float? VictimZ
+    float? VictimX,   float? VictimY,   float? VictimZ,
+    bool AfterTimeIsOut
 );
 
 public record ChatEventData(

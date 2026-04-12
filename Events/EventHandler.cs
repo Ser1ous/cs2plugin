@@ -165,7 +165,8 @@ public class PluginEventHandler
             @event.Thrusmoke, @event.Attackerblind, @event.Noscope,
             @event.Penetrated > 0, @event.Attackerinair,
             @event.DmgHealth, @event.DmgArmor,
-            ax, ay, az, vx, vy, vz
+            ax, ay, az, vx, vy, vz,
+            ctx.BombExploded || ctx.RoundEnded
         ));
 
         return HookResult.Continue;
@@ -342,6 +343,8 @@ public class PluginEventHandler
     {
         var ctx = _matchManager.Context;
         if (ctx?.State != MatchState.Live) return HookResult.Continue;
+
+        ctx.BombExploded = true;
 
         int round = _matchManager.GetCurrentRound();
         int attempts = _matchManager.GetTotalDefuseAttempts();
