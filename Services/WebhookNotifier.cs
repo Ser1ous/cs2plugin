@@ -57,6 +57,22 @@ public class WebhookNotifier
 
     /// <summary>
     /// Fire-and-forget POST of <c>{"lobby":matchId}</c> to the configured
+    /// map-cancel URL (sent when all players leave during a live/paused match).
+    /// Empty/whitespace URL is a no-op.
+    /// </summary>
+    public void PostMapCancel(string url, string matchId)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+
+        string payload = JsonSerializer.Serialize(new
+        {
+            lobby = matchId
+        });
+        _ = SendAsync(url, payload, $"map_cancel matchId={matchId}");
+    }
+
+    /// <summary>
+    /// Fire-and-forget POST of <c>{"lobby":matchId}</c> to the configured
     /// map-end URL. Empty/whitespace URL is a no-op.
     /// </summary>
     public void PostMapEnd(string url, string matchId)

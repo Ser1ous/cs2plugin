@@ -104,6 +104,7 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         RegisterEventHandler<EventPlayerTeam>         (_eventHandler.OnPlayerChangeTeam);
         RegisterEventHandler<EventCsWinPanelMatch>    (_eventHandler.OnCsWinPanelMatch);
         RegisterEventHandler<EventPlayerConnectFull>  (_eventHandler.OnPlayerConnectFull);
+        RegisterEventHandler<EventPlayerDisconnect>   (_eventHandler.OnPlayerDisconnect);
         RegisterEventHandler<EventOtherDeath>         (_eventHandler.OnOtherDeath);
         RegisterEventHandler<EventRoundMvp>           (_eventHandler.OnRoundMvp);
 
@@ -130,6 +131,16 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
             string currentMap = Server.MapName;
             _eventHandler.OnMapStart(currentMap);
         }
+
+        // On server start (and hot-reload), always boot into AIM mode so
+        // the server is never left in an undefined state waiting for a match.
+        // A small timer ensures the server tick is running before changelevel.
+        // EnterAimMode() is a no-op if a reload is already in flight.
+        AddTimer(1.0f, () =>
+        {
+            if (_matchManager.Context != null) return; // match loaded already, skip
+            _aimManager.EnterAimMode();
+        });
 
         Console.WriteLine("[CS2Match] Plugin loaded successfully.");
     }

@@ -20,10 +20,12 @@ public class PluginConfig : BasePluginConfig
     public int MinPlayersToStart { get; set; } = 0;
 
     // Optional outbound webhooks. Empty string disables the call.
-    //   RoundEndWebhookUrl  — POST {"lobby":"<matchId>","round":<round>}  after every live round.
-    //   MapEndWebhookUrl    — POST {"lobby":"<matchId>"}                  after every map end.
-    //   MapStartWebhookUrl  — POST {"lobby":"<matchId>"}                  when the knife round starts.
-    public string RoundEndWebhookUrl  { get; set; } = "";
-    public string MapEndWebhookUrl    { get; set; } = "";
-    public string MapStartWebhookUrl  { get; set; } = "";
+    //   RoundEndWebhookUrl    — POST {"lobby":"<matchId>","round":<round>}  after every live round.
+    //   MapEndWebhookUrl      — POST {"lobby":"<matchId>"}                  after every map end.
+    //   MapStartWebhookUrl    — POST {"lobby":"<matchId>"}                  when the knife round starts.
+    //   MapCancelWebhookUrl   — POST {"lobby":"<matchId>"}                  when all players leave during a live/paused match.
+    public string RoundEndWebhookUrl    { get; set; } = "";
+    public string MapEndWebhookUrl      { get; set; } = "";
+    public string MapStartWebhookUrl    { get; set; } = "";
+    public string MapCancelWebhookUrl   { get; set; } = "";
 }

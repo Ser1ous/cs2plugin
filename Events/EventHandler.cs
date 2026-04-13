@@ -689,6 +689,19 @@ public class PluginEventHandler
     }
 
     // -------------------------------------------------------------------------
+    // Player disconnect
+    // -------------------------------------------------------------------------
+
+    public HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+        if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+
+        _matchManager.OnPlayerDisconnect();
+        return HookResult.Continue;
+    }
+
+    // -------------------------------------------------------------------------
     // Match complete / win panel
     // -------------------------------------------------------------------------
 
@@ -713,19 +726,31 @@ public class PluginEventHandler
         if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
 
         var ctx = _matchManager.Context;
-        // AIM mode — let the player join freely, but make sure the
-        // AIM cfg has actually been executed (idempotent) AND force
-        // mp_freezetime 2 right now so the FIRST round the player
-        // sees uses the 2s freeze, not whatever the server booted with.
-        //
-        // Problem we're solving: when the AIM map loads on an empty
-        // server, no RoundStart fires (there's nobody to spawn), so
-        // OnFirstRoundStart → EnsureAimApplied never runs. The player
-        // connects, spawns, the first round begins using the stale
-        // mp_freezetime (typically 15s). We fix that here by running
-        // the cfg the instant anyone shows up, before their first round.
+        // AIM mode — check DB access, then ensure AIM cfg is applied.
         if (ctx == null)
         {
+            // Gate: player must exist in the users table (field: steam_id).
+            // The check is async so we fire it in the background and kick on
+            // the main thread via Server.NextFrame if the lookup fails.
+            var capturedPlayer = player;
+            _ = Task.Run(async () =>
+            {
+                bool allowed = await _db.IsPlayerAllowedAsync(capturedPlayer.SteamID);
+                if (!allowed)
+                {
+                    Server.NextFrame(() =>
+                    {
+                        if (capturedPlayer == null || !capturedPlayer.IsValid) return;
+                        capturedPlayer.PrintToChat(
+                            " \x04[Match]\x01 You are not registered on this server. Disconnecting...");
+                        Server.ExecuteCommand(
+                            $"kickid {capturedPlayer.UserId} \"You are not registered on this server.\"");
+                    });
+                }
+            });
+
+            // AIM cfg setup — runs regardless of the DB result so the map
+            // state is correct for players that do pass the check.
             var mapName = CounterStrikeSharp.API.Server.MapName;
             if (_matchManager.AimManager.IsAimMap(mapName))
             {

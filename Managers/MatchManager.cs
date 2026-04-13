@@ -1077,6 +1077,35 @@ public class MatchManager
     /// Safe to call when Context is already null (acts as a "reset to
     /// neutral server state" helper used by force-override loads from AIM).
     /// </summary>
+    /// <summary>
+    /// Called when a player disconnects. If the match is live or paused and
+    /// the last registered player just left, fires the map-cancel webhook.
+    /// </summary>
+    public void OnPlayerDisconnect()
+    {
+        var ctx = Context;
+        if (ctx == null) return;
+        if (ctx.State != MatchState.Live && ctx.State != MatchState.Paused) return;
+
+        // Defer one frame so the engine removes the player from the player list
+        // before we count who remains.
+        Server.NextFrame(() =>
+        {
+            var currentCtx = Context;
+            if (currentCtx == null) return;
+            if (currentCtx.State != MatchState.Live && currentCtx.State != MatchState.Paused) return;
+
+            bool anyRegisteredConnected = Utilities.GetPlayers()
+                .Any(p => p.IsValid && !p.IsBot && _enforcement.IsRegistered(p.SteamID));
+
+            if (!anyRegisteredConnected)
+            {
+                Console.WriteLine($"[CS2Match] All registered players left during live match {currentCtx.Config.MatchId} — sending map cancel webhook.");
+                _webhookNotifier.PostMapCancel(_pluginConfig.MapCancelWebhookUrl, currentCtx.Config.MatchId);
+            }
+        });
+    }
+
     public void AbortMatch(bool silent = false)
     {
         bool hadMatch = Context != null;

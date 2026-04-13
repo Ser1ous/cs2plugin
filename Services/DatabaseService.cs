@@ -240,6 +240,35 @@ public class DatabaseService
     }
 
     // -------------------------------------------------------------------------
+    // users table access control
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns true if the given SteamID exists in the <c>users</c> table
+    /// (field: steam_id). Called in AIM mode to gate server access.
+    /// Fails open (returns true) when the DB is not yet initialised or
+    /// an error occurs so a transient DB hiccup never bricks the server.
+    /// </summary>
+    public async Task<bool> IsPlayerAllowedAsync(ulong steamId)
+    {
+        if (!_initialized || _dataSource == null) return true;
+        try
+        {
+            await using var conn = await _dataSource.OpenConnectionAsync();
+            await using var cmd  = new MySqlCommand(
+                "SELECT COUNT(1) FROM users WHERE steam_id = @sid", conn);
+            cmd.Parameters.AddWithValue("@sid", steamId.ToString());
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt64(result) > 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CS2Match] DB IsPlayerAllowed: {ex.Message}");
+            return true; // fail open on error
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // match_events
     // -------------------------------------------------------------------------
 
