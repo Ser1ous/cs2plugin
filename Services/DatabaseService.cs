@@ -84,6 +84,7 @@ public class DatabaseService
     victim_y                FLOAT,
     victim_z                FLOAT,
     after_time_is_out       TINYINT(1) NOT NULL DEFAULT 0,
+    part_of_body            INT,
     created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_match_round (match_id, round)
 )",
@@ -346,7 +347,7 @@ INSERT INTO kill_events
    dmg_health, dmg_armor,
    attacker_x, attacker_y, attacker_z,
    victim_x,   victim_y,   victim_z,
-   after_time_is_out)
+   after_time_is_out, part_of_body)
 VALUES
   (@mid, @round,
    @asid, @aname, @ateam,
@@ -356,7 +357,7 @@ VALUES
    @dmgh, @dmga,
    @ax, @ay, @az,
    @vx, @vy, @vz,
-   @aftertime)", conn);
+   @aftertime, @partofbody)", conn);
 
             cmd.Parameters.AddWithValue("@mid",    d.MatchId);
             cmd.Parameters.AddWithValue("@round",  d.Round);
@@ -384,7 +385,8 @@ VALUES
             cmd.Parameters.AddWithValue("@vx",        (object?)d.VictimX ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@vy",        (object?)d.VictimY ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@vz",        (object?)d.VictimZ ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@aftertime", d.AfterTimeIsOut ? 1 : 0);
+            cmd.Parameters.AddWithValue("@aftertime",  d.AfterTimeIsOut ? 1 : 0);
+            cmd.Parameters.AddWithValue("@partofbody", (object?)d.PartOfBody ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB LogKill: {ex.Message}"); }
@@ -730,7 +732,8 @@ public record KillEventData(
     int DmgArmor,
     float? AttackerX, float? AttackerY, float? AttackerZ,
     float? VictimX,   float? VictimY,   float? VictimZ,
-    bool AfterTimeIsOut
+    bool AfterTimeIsOut,
+    int? PartOfBody
 );
 
 public record ChatEventData(

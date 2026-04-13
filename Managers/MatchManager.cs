@@ -396,6 +396,9 @@ public class MatchManager
         _ = _db.UpdateMatchAsync(Context.Config.MatchId,
             Context.Team1Score, Context.Team2Score, "knife",
             Context.Config.Maplist[Context.CurrentMapIndex], Context.CurrentMapIndex + 1);
+
+        // Outbound map-start webhook (fire-and-forget, no-op if URL unset).
+        _webhookNotifier.PostMapStart(_pluginConfig.MapStartWebhookUrl, Context.Config.MatchId);
     }
 
     private void AssignPredeterminedSides(string mapSide)

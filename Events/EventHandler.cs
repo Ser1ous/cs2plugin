@@ -169,7 +169,8 @@ public class PluginEventHandler
             @event.Penetrated > 0, @event.Attackerinair,
             @event.DmgHealth, @event.DmgArmor,
             ax, ay, az, vx, vy, vz,
-            ctx.BombExploded || ctx.RoundEnded
+            ctx.BombExploded || ctx.RoundEnded,
+            @event.Hitgroup
         ));
 
         return HookResult.Continue;
