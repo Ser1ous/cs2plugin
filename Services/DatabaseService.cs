@@ -256,7 +256,7 @@ public class DatabaseService
         {
             await using var conn = await _dataSource.OpenConnectionAsync();
             await using var cmd  = new MySqlCommand(
-                "SELECT COUNT(1) FROM users WHERE steam_id = @sid", conn);
+                "SELECT COUNT(1) FROM users WHERE is_in_ban = 0 AND steam_id = @sid", conn);
             cmd.Parameters.AddWithValue("@sid", steamId.ToString());
             var result = await cmd.ExecuteScalarAsync();
             return Convert.ToInt64(result) > 0;
