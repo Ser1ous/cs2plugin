@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
@@ -77,6 +78,32 @@ public class AdminCommands
         _matchManager.AbortMatch();
         _aimManager.EnterAimMode();
         info.ReplyToCommand("[CS2Match] Switching to AIM mode.");
+    }
+
+    // ser_aim_mode — cancel an unattended live match and return to AIM mode.
+    // Conditions that must ALL be true to act:
+    //   1. A match is active AND its state is Live (loaded via ser_plug_load_url).
+    //   2. No real (non-bot) players are currently connected.
+    // Any other situation is silently ignored — this command is only for
+    // cleaning up matches that nobody joined.
+    public void OnSerAimModeCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        var ctx = _matchManager.Context;
+
+        // Ignore if no active match or match is not in Warmup state.
+        if (ctx == null || ctx.State != MatchState.Warmup)
+            return;
+
+        // Ignore if any real player is still on the server.
+        bool anyPlayers = Utilities.GetPlayers()
+            .Any(p => p.IsValid && !p.IsBot);
+
+        if (anyPlayers)
+            return;
+
+        Console.WriteLine("[CS2Match] ser_aim_mode: no players connected — aborting warmup match and switching to AIM mode.");
+        _matchManager.AbortMatch();
+        _aimManager.EnterAimMode();
     }
 
     public void OnAbortMatchCommand(CCSPlayerController? caller, CommandInfo info)

@@ -82,10 +82,11 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         _eventHandler   = new PluginEventHandler(_matchManager, _playerCommands, _db);
 
         // Admin console/chat commands
-        AddCommand("ser_plug_load_url", "Load match config from URL",   _adminCommands.OnLoadUrlCommand);
-        AddCommand("ser_plug_aim_mode", "Switch server to AIM mode",    _adminCommands.OnAimModeCommand);
-        AddCommand("ser_plug_abort",    "Abort current match",          _adminCommands.OnAbortMatchCommand);
-        AddCommand("ser_plug_status",   "Show match/server status",     _adminCommands.OnMatchStatusCommand);
+        AddCommand("ser_plug_load_url", "Load match config from URL",                    _adminCommands.OnLoadUrlCommand);
+        AddCommand("ser_plug_aim_mode", "Switch server to AIM mode",                   _adminCommands.OnAimModeCommand);
+        AddCommand("ser_plug_abort",    "Abort current match",                         _adminCommands.OnAbortMatchCommand);
+        AddCommand("ser_plug_status",   "Show match/server status",                    _adminCommands.OnMatchStatusCommand);
+        AddCommand("ser_aim_mode",      "Cancel live match if empty and enter AIM mode", _adminCommands.OnSerAimModeCommand);
 
         // Game events
         RegisterEventHandler<EventRoundStart>         (_eventHandler.OnRoundStart);
