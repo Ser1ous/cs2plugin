@@ -1066,6 +1066,14 @@ public class MatchManager
         }
 
         _enforcement.Clear();
+
+        // Kick match bots before transitioning to AIM mode
+        if (Context != null && (Context.BotCountTeam1 > 0 || Context.BotCountTeam2 > 0))
+        {
+            Server.ExecuteCommand("bot_kick");
+            Server.ExecuteCommand("bot_quota 0");
+        }
+
         Context = null;
 
         // Return to AIM map after giving players a moment to read the result
@@ -1168,13 +1176,18 @@ public class MatchManager
             if (currentCtx == null) return;
             if (currentCtx.State != MatchState.Live && currentCtx.State != MatchState.Paused) return;
 
-            bool anyRegisteredConnected = Utilities.GetPlayers()
-                .Any(p => p.IsValid && !p.IsBot && _enforcement.IsRegistered(p.SteamID));
+            bool anyHumanConnected = Utilities.GetPlayers()
+                .Any(p => p.IsValid && !p.IsBot && !p.IsHLTV);
 
-            if (!anyRegisteredConnected)
+            if (!anyHumanConnected)
             {
-                Console.WriteLine($"[CS2Match] All registered players left during live match {currentCtx.Config.MatchId} — sending map cancel webhook.");
+                Console.WriteLine($"[CS2Match] All human players left during live match {currentCtx.Config.MatchId} — kicking bots and switching to AIM.");
                 _webhookNotifier.PostMapCancel(_pluginConfig.MapCancelWebhookUrl, currentCtx.Config.MatchId);
+
+                Server.ExecuteCommand("bot_kick");
+                Server.ExecuteCommand("bot_quota 0");
+                AbortMatch();
+                _plugin.AddTimer(2f, () => _aimManager.EnterAimMode());
             }
         });
     }
@@ -1187,6 +1200,13 @@ public class MatchManager
         {
             BroadcastAll(" \x02[Match]\x01 Match aborted.");
             _ = _db.LogMatchEventAsync(Context!.Config.MatchId, "match_aborted");
+        }
+
+        // Kick match bots before clearing context
+        if (Context != null && (Context.BotCountTeam1 > 0 || Context.BotCountTeam2 > 0))
+        {
+            Server.ExecuteCommand("bot_kick");
+            Server.ExecuteCommand("bot_quota 0");
         }
 
         // Sub-manager state reset — previously these held stale config
@@ -1296,7 +1316,8 @@ public class MatchManager
 
         foreach (var player in Utilities.GetPlayers())
         {
-            if (!player.IsValid) continue;
+            if (!player.IsValid || player.IsHLTV) continue;
+            if (player.IsBot && GetConfigTeamFromSide(player.TeamNum) == 0) continue;
             if (player.ActionTrackingServices?.MatchStats is not { } ms) continue;
             ulong key = player.IsBot ? GetBotPseudoSteamId(player) : player.SteamID;
             Context.EngineSnapshots[key] = new EngineStatsSnapshot
@@ -1324,14 +1345,18 @@ public class MatchManager
 
         foreach (var player in Utilities.GetPlayers())
         {
-            if (!player.IsValid) continue;
+            if (!player.IsValid || player.IsHLTV) continue;
             if (player.ActionTrackingServices?.MatchStats is not { } ms) continue;
 
             ulong steamId;
             if (player.IsBot)
             {
-                steamId = GetBotPseudoSteamId(player);
+                // Only track bots that are on a playing team (T/CT),
+                // skip spectator bots and other engine entities.
                 int botCfgTeam = GetConfigTeamFromSide(player.TeamNum);
+                if (botCfgTeam == 0) continue;
+
+                steamId = GetBotPseudoSteamId(player);
                 string botTeamName = GetTeamNameForConfigTeam(botCfgTeam);
                 var botStats = GetOrCreateStats(steamId, player.PlayerName, botCfgTeam, botTeamName);
                 botStats.IsBot = true;

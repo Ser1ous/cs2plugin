@@ -94,14 +94,16 @@ public class AdminCommands
         if (ctx == null || ctx.State != MatchState.Warmup)
             return;
 
-        // Ignore if any real player is still on the server.
-        bool anyPlayers = Utilities.GetPlayers()
-            .Any(p => p.IsValid && !p.IsBot);
+        // Ignore if any real (non-bot, non-SourceTV) player is still on the server.
+        bool anyHumans = Utilities.GetPlayers()
+            .Any(p => p.IsValid && !p.IsBot && !p.IsHLTV);
 
-        if (anyPlayers)
+        if (anyHumans)
             return;
 
-        Console.WriteLine("[CS2Match] ser_aim_mode: no players connected — aborting warmup match and switching to AIM mode.");
+        Console.WriteLine("[CS2Match] ser_aim_mode: no human players connected — kicking bots and switching to AIM mode.");
+        Server.ExecuteCommand("bot_kick");
+        Server.ExecuteCommand("bot_quota 0");
         _matchManager.AbortMatch();
         _aimManager.EnterAimMode();
     }
