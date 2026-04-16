@@ -113,8 +113,11 @@ public class PluginEventHandler
         string? attackerName = null;
         int? attackerTeam = null;
         float? ax = null, ay = null, az = null;
+        bool attackerIsBot = false;
+        string? attackerControllerSteamId = null;
+        bool victimIsBot = victim.IsBot;
 
-        int vCfgTeam  = _matchManager.GetConfigTeamForPlayer(victim.SteamID);
+        int vCfgTeam  = victimIsBot ? 0 : _matchManager.GetConfigTeamForPlayer(victim.SteamID);
         string vTeamName = _matchManager.GetTeamNameForConfigTeam(vCfgTeam);
 
         if (attacker != null && attacker.IsValid && attacker != victim)
@@ -122,18 +125,54 @@ public class PluginEventHandler
             attackerSteamId = attacker.SteamID;
             attackerName    = attacker.PlayerName;
             attackerTeam    = attacker.TeamNum;
+            attackerIsBot   = attacker.IsBot;
             var aPos = attacker.PlayerPawn?.Value?.AbsOrigin;
             if (aPos != null) { ax = aPos.X; ay = aPos.Y; az = aPos.Z; }
 
-            int aCfgTeam  = _matchManager.GetConfigTeamForPlayer(attacker.SteamID);
+            if (attackerIsBot)
+            {
+                var botPawn = attacker.PlayerPawn?.Value;
+                if (botPawn != null)
+                {
+                    var pawnController = botPawn.Controller?.Value as CCSPlayerController;
+                    if (pawnController != null && pawnController.IsValid && !pawnController.IsBot)
+                    {
+                        attackerControllerSteamId = pawnController.SteamID.ToString();
+                    }
+                    else
+                    {
+                        foreach (var p in Utilities.GetPlayers())
+                        {
+                            if (!p.IsValid || p.IsBot) continue;
+                            if (p.PlayerPawn?.Value?.Handle == botPawn.Handle)
+                            {
+                                attackerControllerSteamId = p.SteamID.ToString();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            int aCfgTeam  = attackerIsBot ? 0 : _matchManager.GetConfigTeamForPlayer(attacker.SteamID);
             string aTeamName = _matchManager.GetTeamNameForConfigTeam(aCfgTeam);
 
-            _matchManager.RecordKill(
-                attacker.SteamID, attacker.PlayerName, aCfgTeam, aTeamName,
-                victim.SteamID,   victim.PlayerName,   vCfgTeam, vTeamName,
-                @event.Headshot, round);
+            if (!attackerIsBot && !victimIsBot)
+            {
+                _matchManager.RecordKill(
+                    attacker.SteamID, attacker.PlayerName, aCfgTeam, aTeamName,
+                    victim.SteamID,   victim.PlayerName,   vCfgTeam, vTeamName,
+                    @event.Headshot, round);
+            }
+            else if (!victimIsBot)
+            {
+                _matchManager.RecordKill(
+                    0, "", 0, "",
+                    victim.SteamID, victim.PlayerName, vCfgTeam, vTeamName,
+                    false, round);
+            }
         }
-        else
+        else if (!victimIsBot)
         {
             // World kill / suicide — still record the death
             _matchManager.RecordKill(
@@ -145,7 +184,7 @@ public class PluginEventHandler
         // Scoreboard: credit assist (and flash assist)
         ulong? assisterSteamId = null;
         string? assisterName = null;
-        if (assister != null && assister.IsValid && assister != victim)
+        if (assister != null && assister.IsValid && assister != victim && !assister.IsBot)
         {
             assisterSteamId = assister.SteamID;
             assisterName    = assister.PlayerName;
@@ -170,7 +209,8 @@ public class PluginEventHandler
             @event.DmgHealth, @event.DmgArmor,
             ax, ay, az, vx, vy, vz,
             ctx.BombExploded || ctx.RoundEnded,
-            @event.Hitgroup
+            @event.Hitgroup,
+            attackerIsBot, attackerControllerSteamId, victimIsBot
         ));
 
         return HookResult.Continue;

@@ -85,6 +85,9 @@ public class DatabaseService
     victim_z                FLOAT,
     after_time_is_out       TINYINT(1) NOT NULL DEFAULT 0,
     part_of_body            INT,
+    attacker_is_bot         TINYINT(1) NOT NULL DEFAULT 0,
+    attacker_controller_steam_id VARCHAR(32) DEFAULT NULL,
+    victim_is_bot           TINYINT(1) NOT NULL DEFAULT 0,
     created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_match_round (match_id, round)
 )",
@@ -164,6 +167,8 @@ public class DatabaseService
     last_round           INT NOT NULL DEFAULT 0,
     is_closed            TINYINT(1) NOT NULL DEFAULT 0,
     mvps                 INT NOT NULL DEFAULT 0,
+    score                INT NOT NULL DEFAULT 0,
+    is_bot               TINYINT(1) NOT NULL DEFAULT 0,
     updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_match_player (match_id, steamid),
     INDEX idx_match_id (match_id)
@@ -230,6 +235,24 @@ public class DatabaseService
                 await using var cmd = new MySqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
             }
+            // Migrations for existing tables — silently skip if columns already exist
+            var migrations = new[]
+            {
+                "ALTER TABLE kill_events ADD COLUMN attacker_is_bot TINYINT(1) NOT NULL DEFAULT 0",
+                "ALTER TABLE kill_events ADD COLUMN attacker_controller_steam_id VARCHAR(32) DEFAULT NULL",
+                "ALTER TABLE kill_events ADD COLUMN victim_is_bot TINYINT(1) NOT NULL DEFAULT 0",
+                "ALTER TABLE match_scoreboard ADD COLUMN is_bot TINYINT(1) NOT NULL DEFAULT 0",
+            };
+            foreach (var migration in migrations)
+            {
+                try
+                {
+                    await using var migCmd = new MySqlCommand(migration, conn);
+                    await migCmd.ExecuteNonQueryAsync();
+                }
+                catch { }
+            }
+
             _initialized = true;
             Console.WriteLine("[CS2Match] Database tables initialized");
         }
@@ -376,7 +399,8 @@ INSERT INTO kill_events
    dmg_health, dmg_armor,
    attacker_x, attacker_y, attacker_z,
    victim_x,   victim_y,   victim_z,
-   after_time_is_out, part_of_body)
+   after_time_is_out, part_of_body,
+   attacker_is_bot, attacker_controller_steam_id, victim_is_bot)
 VALUES
   (@mid, @round,
    @asid, @aname, @ateam,
@@ -386,7 +410,8 @@ VALUES
    @dmgh, @dmga,
    @ax, @ay, @az,
    @vx, @vy, @vz,
-   @aftertime, @partofbody)", conn);
+   @aftertime, @partofbody,
+   @aisbot, @actrlsid, @visbot)", conn);
 
             cmd.Parameters.AddWithValue("@mid",    d.MatchId);
             cmd.Parameters.AddWithValue("@round",  d.Round);
@@ -416,6 +441,9 @@ VALUES
             cmd.Parameters.AddWithValue("@vz",        (object?)d.VictimZ ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@aftertime",  d.AfterTimeIsOut ? 1 : 0);
             cmd.Parameters.AddWithValue("@partofbody", (object?)d.PartOfBody ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@aisbot",    d.AttackerIsBot ? 1 : 0);
+            cmd.Parameters.AddWithValue("@actrlsid",  (object?)d.AttackerControllerSteamId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@visbot",    d.VictimIsBot ? 1 : 0);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB LogKill: {ex.Message}"); }
@@ -494,7 +522,7 @@ INSERT INTO match_scoreboard
    entry_count, entry_wins,
    equipment_value, money_saved, kill_reward, live_time,
    headshot_kills, cash_earned, enemies_flashed,
-   bomb_plants, bomb_defuses, rounds_played, last_round, mvps)
+   bomb_plants, bomb_defuses, rounds_played, last_round, mvps, score, is_bot)
 VALUES
   (@mid,@sid,@name,@ct,@tn,
    @k,@d,@dmg,@a,
@@ -508,7 +536,7 @@ VALUES
    @enc,@enw,
    @eqv,@ms,@kr,@lt,
    @hsk,@ce,@ef,
-   @bp,@bd,@rp,@lr,@mvp)
+   @bp,@bd,@rp,@lr,@mvp,@score,@isbot)
 ON DUPLICATE KEY UPDATE
   player_name=VALUES(player_name),
   kills=VALUES(kills), deaths=VALUES(deaths), damage_dealt=VALUES(damage_dealt), assists=VALUES(assists),
@@ -529,7 +557,7 @@ ON DUPLICATE KEY UPDATE
   headshot_kills=VALUES(headshot_kills), cash_earned=VALUES(cash_earned), enemies_flashed=VALUES(enemies_flashed),
   bomb_plants=VALUES(bomb_plants), bomb_defuses=VALUES(bomb_defuses),
   rounds_played=VALUES(rounds_played), last_round=VALUES(last_round),
-  mvps=VALUES(mvps),
+  mvps=VALUES(mvps), score=VALUES(score), is_bot=VALUES(is_bot),
   updated_at=CURRENT_TIMESTAMP", conn);
 
             cmd.Parameters.AddWithValue("@mid",  r.MatchId);
@@ -578,7 +606,9 @@ ON DUPLICATE KEY UPDATE
             cmd.Parameters.AddWithValue("@bd",   r.BombDefuses);
             cmd.Parameters.AddWithValue("@rp",   r.RoundsPlayed);
             cmd.Parameters.AddWithValue("@lr",   r.LastRound);
-            cmd.Parameters.AddWithValue("@mvp",  r.Mvps);
+            cmd.Parameters.AddWithValue("@mvp",   r.Mvps);
+            cmd.Parameters.AddWithValue("@score", r.Score);
+            cmd.Parameters.AddWithValue("@isbot", r.IsBot ? 1 : 0);
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception ex) { Console.WriteLine($"[CS2Match] DB UpsertScoreboard: {ex.Message}"); }
@@ -762,7 +792,10 @@ public record KillEventData(
     float? AttackerX, float? AttackerY, float? AttackerZ,
     float? VictimX,   float? VictimY,   float? VictimZ,
     bool AfterTimeIsOut,
-    int? PartOfBody
+    int? PartOfBody,
+    bool AttackerIsBot = false,
+    string? AttackerControllerSteamId = null,
+    bool VictimIsBot = false
 );
 
 public record ChatEventData(
@@ -837,7 +870,9 @@ public record ScoreboardRow(
     // Tracking
     int RoundsPlayed,
     int LastRound,
-    int Mvps
+    int Mvps,
+    int Score,
+    bool IsBot = false
 );
 
 public record RoundPlayerRow(

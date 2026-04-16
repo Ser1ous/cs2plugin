@@ -16,8 +16,10 @@ public class ReadyManager
         _readyPlayers.Clear();
 
         int total = 0;
-        foreach (var p in config.Team1.Players) total++;
-        foreach (var p in config.Team2.Players) total++;
+        foreach (var p in config.Team1.Players)
+            if (!TeamConfig.IsBotId(p.Key)) total++;
+        foreach (var p in config.Team2.Players)
+            if (!TeamConfig.IsBotId(p.Key)) total++;
         _requiredCount = total > 0 ? total : config.PlayersPerTeam * 2;
     }
 
@@ -42,9 +44,11 @@ public class ReadyManager
         if (_config == null) return new();
         var result = new List<string>();
         foreach (var (sid, name) in _config.Team1.Players)
-            if (!_readyPlayers.Contains(ulong.Parse(sid))) result.Add(name);
+            if (!TeamConfig.IsBotId(sid) && ulong.TryParse(sid, out var id) && !_readyPlayers.Contains(id))
+                result.Add(name);
         foreach (var (sid, name) in _config.Team2.Players)
-            if (!_readyPlayers.Contains(ulong.Parse(sid))) result.Add(name);
+            if (!TeamConfig.IsBotId(sid) && ulong.TryParse(sid, out var id) && !_readyPlayers.Contains(id))
+                result.Add(name);
         return result;
     }
 

@@ -45,4 +45,18 @@ public class TeamConfig
 
     [JsonPropertyName("players")]
     public Dictionary<string, string> Players { get; set; } = new();
+
+    public static bool IsBotId(string playerId) =>
+        playerId.StartsWith("BOT_", StringComparison.OrdinalIgnoreCase);
+
+    public int BotCount
+    {
+        get
+        {
+            int count = 0;
+            foreach (var key in Players.Keys)
+                if (IsBotId(key)) count++;
+            return count;
+        }
+    }
 }

@@ -175,6 +175,8 @@ public class MatchManager
                 // Overridden after knife winner picks a side.
                 Team1Side = TeamSide.Terrorist,
                 Team2Side = TeamSide.CounterTerrorist,
+                BotCountTeam1 = config.Team1.BotCount,
+                BotCountTeam2 = config.Team2.BotCount,
             };
             _readyManager.Setup(config);
             _pauseManager.Setup(config);
@@ -329,6 +331,9 @@ public class MatchManager
         BroadcastAll($" \x04[Match]\x01 Map: \x0B{Context.Config.Maplist[Context.CurrentMapIndex]}\x01 — type \x09!ready\x01 when ready");
 
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "warmup_start");
+
+        if (HasBots)
+            _plugin.AddTimer(2f, SpawnBots);
     }
 
     public void OnPlayerReady(CCSPlayerController player)
@@ -390,6 +395,11 @@ public class MatchManager
         // warmup has ended and the round starts cleanly with knife settings.
         Server.ExecuteCommand("mp_restartgame 1");
         Server.ExecuteCommand("mp_warmup_end");
+
+        // knife.cfg contains bot_kick + bot_quota 0 — re-spawn bots after
+        // the restartgame settles (1s countdown + buffer).
+        if (HasBots)
+            _plugin.AddTimer(2f, SpawnBots);
 
         BroadcastAll(" \x04[Match]\x01 \x09KNIFE ROUND\x01 — winner picks side!");
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "knife_start");
@@ -574,9 +584,16 @@ public class MatchManager
         // pause timer, so clear it before exiting warmup.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        if (HasBots)
+            ExecuteBotCvars();
         Server.ExecuteCommand("mp_warmup_pausetimer 0");
         Server.ExecuteCommand("mp_unpause_match");
         Server.ExecuteCommand("mp_warmup_end");
+
+        // competitive.cfg contains bot_quota 0 — re-spawn bots after
+        // warmup exit settles.
+        if (HasBots)
+            _plugin.AddTimer(2f, SpawnBots);
 
         BroadcastLive();
         LogLive();
@@ -605,8 +622,15 @@ public class MatchManager
         // mp_pause_match survives a game restart otherwise.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
+        if (HasBots)
+            ExecuteBotCvars();
         Server.ExecuteCommand("mp_unpause_match");
         Server.ExecuteCommand("mp_restartgame 3");
+
+        // competitive.cfg contains bot_quota 0 and mp_restartgame removes
+        // bots — re-spawn after the 3s restart countdown settles.
+        if (HasBots)
+            _plugin.AddTimer(5f, SpawnBots);
 
         // LIVE messages after restart settles (3s countdown + buffer)
         BroadcastLive(delay: 5f);
@@ -623,6 +647,55 @@ public class MatchManager
             if (!player.IsValid || player.IsBot) continue;
             _enforcement.EnforceSide(player, Context);
         }
+    }
+
+    private bool HasBots => Context != null && (Context.BotCountTeam1 > 0 || Context.BotCountTeam2 > 0);
+
+    /// <summary>
+    /// Overrides bot_kick / bot_quota 0 that cfgs apply, then spawns the
+    /// exact number of bots required. Safe to call multiple times — kicks
+    /// existing bots first to avoid duplicates.
+    /// </summary>
+    private void SpawnBots()
+    {
+        if (Context == null) return;
+
+        int total = Context.BotCountTeam1 + Context.BotCountTeam2;
+
+        // 1. Kick existing bots and suppress engine auto-fill by setting
+        //    quota to 0 BEFORE adding. bot_quota_mode 0 (normal) auto-fills
+        //    to bot_quota — if we set quota=N first, the engine spawns N
+        //    bots immediately, and our bot_add commands add N more.
+        Server.ExecuteCommand("bot_kick");
+        Server.ExecuteCommand("bot_quota 0");
+        Server.ExecuteCommand("bot_quota_mode 0");
+        Server.ExecuteCommand("bot_join_after_player 0");
+        Server.ExecuteCommand("bot_auto_vacate 0");
+
+        // 2. Manually place the exact number of bots on each team's
+        //    current CS side. bot_add bypasses bot_quota 0.
+        string team1Cmd = Context.Team1Side == TeamSide.CounterTerrorist ? "bot_add_ct" : "bot_add_t";
+        string team2Cmd = Context.Team2Side == TeamSide.CounterTerrorist ? "bot_add_ct" : "bot_add_t";
+
+        for (int i = 0; i < Context.BotCountTeam1; i++)
+            Server.ExecuteCommand(team1Cmd);
+        for (int i = 0; i < Context.BotCountTeam2; i++)
+            Server.ExecuteCommand(team2Cmd);
+
+        // 3. NOW raise the quota to match what we placed — this prevents
+        //    the engine from kicking our bots on the next round restart.
+        Server.ExecuteCommand($"bot_quota {total}");
+
+        Console.WriteLine($"[CS2Match] SpawnBots: spawned {total} bots ({Context.BotCountTeam1} team1, {Context.BotCountTeam2} team2)");
+    }
+
+    private static void ExecuteBotCvars()
+    {
+        Server.ExecuteCommand("bot_difficulty 2");
+        Server.ExecuteCommand("bot_chatter normal");
+        Server.ExecuteCommand("bot_defer_to_human_goals 1");
+        Server.ExecuteCommand("bot_defer_to_human_items 1");
+        Server.ExecuteCommand("custom_bot_difficulty 2");
     }
 
     private void BroadcastLive(float delay = 2f)
@@ -1201,7 +1274,9 @@ public class MatchManager
                 // Tracking
                 stats.RoundsPlayed,
                 round,
-                stats.Mvps
+                stats.Mvps,
+                stats.Score,
+                stats.IsBot
             ));
         }
     }
@@ -1221,9 +1296,10 @@ public class MatchManager
 
         foreach (var player in Utilities.GetPlayers())
         {
-            if (!player.IsValid || player.IsBot) continue;
+            if (!player.IsValid) continue;
             if (player.ActionTrackingServices?.MatchStats is not { } ms) continue;
-            Context.EngineSnapshots[player.SteamID] = new EngineStatsSnapshot
+            ulong key = player.IsBot ? GetBotPseudoSteamId(player) : player.SteamID;
+            Context.EngineSnapshots[key] = new EngineStatsSnapshot
             {
                 Damage        = ms.Damage,
                 Kills         = ms.Kills,
@@ -1248,12 +1324,27 @@ public class MatchManager
 
         foreach (var player in Utilities.GetPlayers())
         {
-            if (!player.IsValid || player.IsBot) continue;
-            if (!Context.PlayerStats.TryGetValue(player.SteamID, out var stats)) continue;
+            if (!player.IsValid) continue;
             if (player.ActionTrackingServices?.MatchStats is not { } ms) continue;
 
+            ulong steamId;
+            if (player.IsBot)
+            {
+                steamId = GetBotPseudoSteamId(player);
+                int botCfgTeam = GetConfigTeamFromSide(player.TeamNum);
+                string botTeamName = GetTeamNameForConfigTeam(botCfgTeam);
+                var botStats = GetOrCreateStats(steamId, player.PlayerName, botCfgTeam, botTeamName);
+                botStats.IsBot = true;
+            }
+            else
+            {
+                steamId = player.SteamID;
+            }
+
+            if (!Context.PlayerStats.TryGetValue(steamId, out var stats)) continue;
+
             // Snapshot from round start (for per-round deltas)
-            var snap = Context.EngineSnapshots.GetValueOrDefault(player.SteamID);
+            var snap = Context.EngineSnapshots.GetValueOrDefault(steamId);
 
             // --- Per-round deltas (compute BEFORE overwriting cumulative) ---
             stats.RoundDamageDealt = ms.Damage        - snap.Damage;
@@ -1314,6 +1405,7 @@ public class MatchManager
             // --- Time & MVP ---
             stats.LiveTime = ms.LiveTime;
             stats.Mvps     = player.MVPs;
+            stats.Score    = player.Score;
 
             // --- Tracking ---
             stats.RoundsPlayed = round;
@@ -1757,6 +1849,27 @@ public class MatchManager
         int t1 = GetConfigTeamForPlayer(steamId1);
         int t2 = GetConfigTeamForPlayer(steamId2);
         return t1 != 0 && t1 == t2;
+    }
+
+    /// <summary>
+    /// Returns a stable pseudo-SteamID for a bot player, derived from its
+    /// player slot. Slot is unique per connected player and stable for the
+    /// duration of the bot's session. Values (1–64) never collide with
+    /// real Steam IDs (76561198…).
+    /// </summary>
+    private static ulong GetBotPseudoSteamId(CCSPlayerController bot) =>
+        (ulong)(bot.Slot + 1);
+
+    /// <summary>
+    /// Resolves config team (1 or 2) from a CS team number (2=T, 3=CT)
+    /// using the current Team1Side / Team2Side mapping.
+    /// </summary>
+    private int GetConfigTeamFromSide(int teamNum)
+    {
+        if (Context == null) return 0;
+        if (teamNum == (int)Context.Team1Side) return 1;
+        if (teamNum == (int)Context.Team2Side) return 2;
+        return 0;
     }
 
     public int GetConfigTeamForPlayer(ulong steamId)
