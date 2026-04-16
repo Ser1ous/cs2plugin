@@ -10,7 +10,6 @@ public class MatchContext
 
     public bool PendingWarmup { get; set; } = false;
     public string DemoName { get; set; } = "";
-    public string DemoTimestamp { get; set; } = ""; // captured at map load, matches tv_autorecord filename
     public int CurrentMapIndex { get; set; } = 0;
 
     public HashSet<ulong> ReadyPlayers { get; set; } = new();

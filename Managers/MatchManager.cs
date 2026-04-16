@@ -276,10 +276,6 @@ public class MatchManager
         Context.Team1Side = TeamSide.Terrorist;
         Context.Team2Side = TeamSide.CounterTerrorist;
 
-        // Capture timestamp now — tv_autorecord names the demo file using the
-        // time the map loaded, not the time the match goes live.
-        Context.DemoTimestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmm");
-
         // Mark warmup as pending — actual setup runs on first RoundStart
         Context.PendingWarmup = true;
         Console.WriteLine($"[CS2Match] Map loading: {mapName} — warmup will start on first round");
@@ -716,14 +712,14 @@ public class MatchManager
         string map = Context.Config.Maplist[Context.CurrentMapIndex];
         int mapIdx = Context.CurrentMapIndex + 1;
 
-        // Build the demo filename using CS2's auto-record format:
-        // auto-YYYYMMDD-HHMM-{map}-{hostname}.dem
-        // Timestamp is from map load, matching when tv_autorecord actually started.
-        string timestamp = Context.DemoTimestamp;
-        string hostname  = ConVar.Find("hostname")?.StringValue ?? "server";
-        // Sanitise hostname: strip characters that CS2 replaces with underscores
-        hostname = System.Text.RegularExpressions.Regex.Replace(hostname, @"[^\w\-]", "_");
-        Context.DemoName = $"auto-{timestamp}-{map}-{hostname}.dem";
+        // Explicitly record the demo to a deterministic filename so the name
+        // stored in the DB always matches the real file on disk. We disable
+        // tv_autorecord first to prevent double recording.
+        string demoBase = $"match_{matchId}_map{mapIdx}_{map}";
+        Context.DemoName = $"{demoBase}.dem";
+        Server.ExecuteCommand("tv_autorecord 0");
+        Server.ExecuteCommand("tv_stoprecord");
+        Server.ExecuteCommand($"tv_record {demoBase}");
 
         _ = _db.LogMatchEventAsync(matchId, "match_live", $"{{\"map\":\"{map}\"}}");
         _ = _db.UpdateMatchAsync(matchId, 0, 0, "live", map, mapIdx);

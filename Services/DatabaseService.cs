@@ -505,9 +505,9 @@ VALUES (@mid, @round, @et, @t1, @t2, @winner, @data)", conn);
     public async Task UpsertScoreboardAsync(ScoreboardRow r)
     {
         if (!_initialized || _dataSource == null) return;
+        if (r.ConfigTeam == 0) return;
         try
         {
-            if( r.ConfigTeam == 0) return;
             await using var conn = await _dataSource.OpenConnectionAsync();
             await using var cmd = new MySqlCommand(@"
 INSERT INTO match_scoreboard
