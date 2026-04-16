@@ -15,6 +15,9 @@ public class MatchContext
 
     public HashSet<ulong> ReadyPlayers { get; set; } = new();
 
+    public int BotCountTeam1 { get; set; } = 0;
+    public int BotCountTeam2 { get; set; } = 0;
+
     public TeamSide KnifeWinnerCsTeam { get; set; } = TeamSide.None;
     public int KnifeWinnerConfigTeam { get; set; } = 0;
 
@@ -100,6 +103,7 @@ public class PlayerStats
     public string PlayerName { get; set; } = "";
     public int ConfigTeam    { get; set; }
     public string TeamName   { get; set; } = "";
+    public bool IsBot        { get; set; }
 
     // =====================================================================
     // Engine-sourced stats (overwritten by SyncStatsFromEngine at round end
@@ -160,7 +164,8 @@ public class PlayerStats
     public int LiveTime { get; set; }  // seconds alive (int, from engine)
 
     // --- MVP ---
-    public int Mvps { get; set; }
+    public int Mvps  { get; set; }
+    public int Score { get; set; }
 
     // =====================================================================
     // Manually-tracked stats (NOT available from engine MatchStats)
