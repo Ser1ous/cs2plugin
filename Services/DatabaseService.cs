@@ -507,6 +507,7 @@ VALUES (@mid, @round, @et, @t1, @t2, @winner, @data)", conn);
         if (!_initialized || _dataSource == null) return;
         try
         {
+            if( r.ConfigTeam == 0) return;
             await using var conn = await _dataSource.OpenConnectionAsync();
             await using var cmd = new MySqlCommand(@"
 INSERT INTO match_scoreboard
