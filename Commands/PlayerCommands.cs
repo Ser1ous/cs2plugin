@@ -6,7 +6,7 @@ using CS2MatchPlugin.State;
 namespace CS2MatchPlugin.Commands;
 
 /// <summary>
-/// Handles chat-triggered player commands: !ready, .ready, .pause, .unpause, .ct, .t
+/// Handles chat-triggered player commands: .pause, .unpause, .ct, .t, .stay, .switch.
 /// This class processes raw say messages routed from the event handler.
 /// </summary>
 public class PlayerCommands
@@ -28,12 +28,6 @@ public class PlayerCommands
 
         switch (msg)
         {
-            case "!ready":
-            case ".ready":
-                Console.WriteLine($"[CS2Match] HandleChatMessage: MATCHED .ready command");
-                HandleReady(player);
-                return true;
-
             case ".pause":
                 Console.WriteLine($"[CS2Match] HandleChatMessage: MATCHED .pause command");
                 HandlePause(player);
@@ -72,16 +66,6 @@ public class PlayerCommands
                 Console.WriteLine($"[CS2Match] HandleChatMessage: no match for '{msg}'");
                 return false;
         }
-    }
-
-    private void HandleReady(CCSPlayerController player)
-    {
-        if (_matchManager.State != MatchState.Warmup)
-        {
-            // Silently ignore outside warmup
-            return;
-        }
-        _matchManager.OnPlayerReady(player);
     }
 
     private void HandlePause(CCSPlayerController player)

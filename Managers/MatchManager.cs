@@ -342,33 +342,40 @@ public class MatchManager
         string displayName = MapChanger.IsWorkshopId(mapEntry)
             ? $"{Server.MapName} (workshop {mapEntry})"
             : mapEntry;
-        BroadcastAll($" \x04[Match]\x01 Map: \x0B{displayName}\x01 — type \x09!ready\x01 when ready");
+        BroadcastAll($" \x04[Match]\x01 Map: \x0B{displayName}\x01 — knife round starts once everyone is connected");
 
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "warmup_start");
 
         if (HasBots)
             _plugin.AddTimer(2f, SpawnBots);
+
+        // Same-map case: the warmup cfg was applied without a map change, so
+        // no one reconnects and OnPlayerConnectFull never fires. Auto-ready
+        // anyone already on the server so the knife round still starts.
+        foreach (var p in Utilities.GetPlayers())
+        {
+            if (!p.IsValid || p.IsBot) continue;
+            MarkPlayerConnectedForReady(p);
+        }
     }
 
-    public void OnPlayerReady(CCSPlayerController player)
+    /// <summary>
+    /// Replaces the old <c>!ready</c> flow. Called from the connect event
+    /// (and from <see cref="EnterWarmup"/> for already-connected players).
+    /// Marks the player as ready; once the last registered player connects,
+    /// <see cref="ReadyManager"/> fires <c>OnAllReady</c> and the knife round
+    /// starts automatically. Idempotent — safe to call on reconnect.
+    /// </summary>
+    public void MarkPlayerConnectedForReady(CCSPlayerController player)
     {
         if (Context?.State != MatchState.Warmup) return;
-
-        if (!_readyManager.IsRegisteredPlayer(player.SteamID))
-        {
-            player.PrintToChat(" \x02[Match]\x01 You are not registered in this match.");
-            return;
-        }
+        if (!_readyManager.IsRegisteredPlayer(player.SteamID)) return;
 
         bool accepted = _readyManager.MarkReady(player.SteamID);
         if (!accepted) return;
 
         var (ready, required) = _readyManager.GetStatus();
-        BroadcastAll($" \x04[Match]\x01 {player.PlayerName} is ready! \x09{ready}/{required}\x01");
-
-        var notReady = _readyManager.GetNotReadyNames();
-        if (notReady.Count > 0)
-            BroadcastAll($" \x04[Match]\x01 Waiting for: \x02{string.Join("\x01, \x02", notReady)}\x01");
+        BroadcastAll($" \x04[Match]\x01 \x09{ready}/{required}\x01 players connected");
     }
 
     // -------------------------------------------------------------------------
@@ -724,16 +731,15 @@ public class MatchManager
     }
 
     /// <summary>
-    /// Builds the deterministic GOTV demo name for a given match / map slot.
-    /// Format: <c>match_{matchId}_map{mapNumber}_{mapName}</c> — e.g.
-    /// <c>match_120_map1_de_nuke</c>. The engine appends <c>.dem</c>
-    /// automatically when <c>tv_record</c> is invoked, so the base returned
-    /// here is passed to the command as-is. Callers that need the on-disk
-    /// filename (for the DB / webhook payload) should append <c>.dem</c>
-    /// themselves via <see cref="DemoFilenameWithExtension"/>.
+    /// Builds the GOTV demo name to mirror LinuxGSM's native auto-record
+    /// format. Example: <c>auto-20260417-1325-de_cache-LinuxGSM</c>. The
+    /// engine appends <c>.dem</c> automatically when <c>tv_record</c> is
+    /// invoked. Callers that need the on-disk filename (for the DB /
+    /// webhook payload) should append <c>.dem</c> via
+    /// <see cref="DemoFilenameWithExtension"/>.
     /// </summary>
-    private static string GenerateDemoBaseName(string matchId, int mapNumber, string mapName)
-        => $"match_{matchId}_map{mapNumber}_{mapName}";
+    private static string GenerateDemoBaseName(string mapName)
+        => $"auto-{DateTime.Now:yyyyMMdd-HHmm}-{mapName}-LinuxGSM";
 
     /// <summary>
     /// Full on-disk demo filename including the <c>.dem</c> extension.
@@ -749,10 +755,9 @@ public class MatchManager
         string map = Context.Config.Maplist[Context.CurrentMapIndex];
         int mapIdx = Context.CurrentMapIndex + 1;
 
-        // Build the deterministic demo filename once and track it on the
-        // context. Laravel persists this exact name; the web panel links to
-        // it verbatim.
-        string demoBase = GenerateDemoBaseName(matchId, mapIdx, map);
+        // Build the demo filename from Server.MapName so workshop IDs become
+        // the real short map name (e.g. de_cache) instead of a numeric id.
+        string demoBase = GenerateDemoBaseName(Server.MapName);
         Context.DemoName = DemoFilenameWithExtension(demoBase);
 
         // ---------------------------------------------------------------

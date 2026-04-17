@@ -827,7 +827,7 @@ public class PluginEventHandler
         player.PrintToChat($" \x04[Match]\x01 Welcome, \x09{player.PlayerName}\x01! You are on \x0B{teamName}\x01.");
 
         if (ctx.State == MatchState.Warmup)
-            player.PrintToChat($" \x04[Match]\x01 Type \x09!ready\x01 when you are ready to play.");
+            _matchManager.MarkPlayerConnectedForReady(player);
 
         // Force the player onto their team's *current* side. Critical for
         // reconnects mid-live: if Team A is now on CT due to halftime/overtime,
