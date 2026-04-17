@@ -31,34 +31,46 @@ public class MapChanger
             return;
         }
 
+        string trimmed = mapName.Trim();
+
         _plugin.AddTimer(0.5f, () =>
         {
-            bool alreadyOnMap = string.Equals(Server.MapName, mapName, StringComparison.OrdinalIgnoreCase);
-            bool isWorkshop   = ulong.TryParse(mapName, out _);
+            bool alreadyOnMap = string.Equals(Server.MapName, trimmed, StringComparison.OrdinalIgnoreCase);
+            bool isWorkshop   = IsWorkshopId(trimmed);
 
             if (alreadyOnMap)
             {
                 Console.WriteLine(
-                    $"[CS2Match] Already on {mapName}, using mp_restartgame instead of changelevel");
+                    $"[CS2Match] Already on {trimmed}, using mp_restartgame instead of changelevel");
                 Server.ExecuteCommand("mp_restartgame 3");
 
                 _plugin.AddTimer(4.0f, () =>
                 {
-                    Server.ExecuteCommand($"host_say [CS2Match] Map restarted: {mapName}");
+                    Server.ExecuteCommand($"host_say [CS2Match] Map restarted: {trimmed}");
                 });
                 return;
             }
 
             if (isWorkshop)
             {
-                Console.WriteLine($"[CS2Match] Loading workshop map: {mapName}");
-                Server.ExecuteCommand($"host_workshop_map {mapName}");
+                Console.WriteLine($"[CS2Match] Loading workshop map: {trimmed}");
+                Server.ExecuteCommand($"host_workshop_map {trimmed}");
             }
             else
             {
-                Console.WriteLine($"[CS2Match] Changing map to: {mapName}");
-                Server.ExecuteCommand($"changelevel {mapName}");
+                Console.WriteLine($"[CS2Match] Changing map to: {trimmed}");
+                Server.ExecuteCommand($"changelevel {trimmed}");
             }
         });
+    }
+
+    private static bool IsWorkshopId(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return false;
+        foreach (char c in value)
+        {
+            if (c < '0' || c > '9') return false;
+        }
+        return ulong.TryParse(value, out _);
     }
 }

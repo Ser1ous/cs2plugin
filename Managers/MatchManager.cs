@@ -705,6 +705,25 @@ public class MatchManager
         });
     }
 
+    /// <summary>
+    /// Builds the deterministic GOTV demo name for a given match / map slot.
+    /// Format: <c>match_{matchId}_map{mapNumber}_{mapName}</c> — e.g.
+    /// <c>match_120_map1_de_nuke</c>. The engine appends <c>.dem</c>
+    /// automatically when <c>tv_record</c> is invoked, so the base returned
+    /// here is passed to the command as-is. Callers that need the on-disk
+    /// filename (for the DB / webhook payload) should append <c>.dem</c>
+    /// themselves via <see cref="DemoFilenameWithExtension"/>.
+    /// </summary>
+    private static string GenerateDemoBaseName(string matchId, int mapNumber, string mapName)
+        => $"match_{matchId}_map{mapNumber}_{mapName}";
+
+    /// <summary>
+    /// Full on-disk demo filename including the <c>.dem</c> extension.
+    /// Used for DB persistence and webhook payloads — must match whatever
+    /// the engine writes to disk.
+    /// </summary>
+    private static string DemoFilenameWithExtension(string baseName) => $"{baseName}.dem";
+
     private void LogLive()
     {
         if (Context == null) return;
@@ -712,11 +731,34 @@ public class MatchManager
         string map = Context.Config.Maplist[Context.CurrentMapIndex];
         int mapIdx = Context.CurrentMapIndex + 1;
 
-        // Explicitly record the demo to a deterministic filename so the name
-        // stored in the DB always matches the real file on disk. We disable
-        // tv_autorecord first to prevent double recording.
-        string demoBase = $"match_{matchId}_map{mapIdx}_{map}";
-        Context.DemoName = $"{demoBase}.dem";
+        // Build the deterministic demo filename once and track it on the
+        // context. Laravel persists this exact name; the web panel links to
+        // it verbatim.
+        string demoBase = GenerateDemoBaseName(matchId, mapIdx, map);
+        Context.DemoName = DemoFilenameWithExtension(demoBase);
+
+        // ---------------------------------------------------------------
+        // Manual GOTV recording — WHY HERE:
+        //
+        // The server runs with tv_autorecord 0 (LinuxGSM auto-recording is
+        // disabled), so the plugin is the sole driver of tv_record /
+        // tv_stoprecord. LogLive() is called from StartLive() right after
+        // mp_warmup_end, and from StartLiveFromKnife() right after
+        // mp_restartgame — i.e. the instant the match transitions into
+        // MatchState.Live, immediately before round 1 begins.
+        //
+        // That placement guarantees the demo captures ONLY the live match:
+        //   - warmup rounds are excluded (we're past mp_warmup_end)
+        //   - the knife round is excluded (knife plays before SidePick,
+        //     and StartLiveFromKnife fires after mp_restartgame clears it)
+        //   - the side-pick pause is excluded (StartLiveFromKnife unpauses
+        //     and restarts before we get here)
+        //
+        // tv_autorecord 0 + tv_stoprecord are defensive: they cancel any
+        // stray auto-recording (e.g. a server cfg that slipped through)
+        // before starting our own, so we never end up with two overlapping
+        // demo files on disk.
+        // ---------------------------------------------------------------
         Server.ExecuteCommand("tv_autorecord 0");
         Server.ExecuteCommand("tv_stoprecord");
         Server.ExecuteCommand($"tv_record {demoBase}");
@@ -983,11 +1025,23 @@ public class MatchManager
             BroadcastAll($" \x04[Match]\x01 {winner} wins the map! Series: {Context.MapWinsTeam1}-{Context.MapWinsTeam2}");
         }
 
+        // Stop the manual GOTV recording now that the map is decided.
+        // Mirrors the tv_record issued in LogLive() — together they bracket
+        // exactly the live portion of the map. Flushing the file here
+        // guarantees the .dem exists on disk before the webhook fires, so
+        // the backend's stored filename always resolves to a real file.
+        Server.ExecuteCommand("tv_stoprecord");
+
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "map_end",
             $"{{\"winner\":\"{winner}\",\"t1\":{Context.Team1Score},\"t2\":{Context.Team2Score},\"draw\":{(draw ? "true" : "false")}}}");
 
         // Outbound map-end webhook (fire-and-forget, no-op if URL unset).
-        _webhookNotifier.PostMapEnd(_pluginConfig.MapEndWebhookUrl, Context.Config.MatchId);
+        // DemoName carries the exact on-disk filename (with .dem) so the
+        // Laravel backend can persist it and generate a direct download link.
+        _webhookNotifier.PostMapEnd(
+            _pluginConfig.MapEndWebhookUrl,
+            Context.Config.MatchId,
+            Context.DemoName);
 
         CheckSeriesProgress();
     }
@@ -1030,6 +1084,11 @@ public class MatchManager
     private void EndMatch()
     {
         if (Context == null) return;
+
+        // Defensive: if the series ended via a path that bypassed OnMapWin
+        // (engine quirk, forfeit, clinch race condition), make sure no GOTV
+        // recording keeps running into AIM mode / the next match load.
+        Server.ExecuteCommand("tv_stoprecord");
 
         string result = Context.MapWinsTeam1 > Context.MapWinsTeam2
             ? $"{Context.Config.Team1.Name} wins the series {Context.MapWinsTeam1}-{Context.MapWinsTeam2}!"
@@ -1204,6 +1263,11 @@ public class MatchManager
             Server.ExecuteCommand("bot_kick");
             Server.ExecuteCommand("bot_quota 0");
         }
+
+        // Make sure a manual tv_record started earlier is not left running
+        // after the abort — otherwise the next match's LogLive() would see
+        // a stale recording in progress before its own tv_stoprecord fires.
+        Server.ExecuteCommand("tv_stoprecord");
 
         // Sub-manager state reset — previously these held stale config
         // references across aborts, which caused ghost !ready votes and

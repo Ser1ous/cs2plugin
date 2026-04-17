@@ -72,18 +72,24 @@ public class WebhookNotifier
     }
 
     /// <summary>
-    /// Fire-and-forget POST of <c>{"lobby":matchId}</c> to the configured
-    /// map-end URL. Empty/whitespace URL is a no-op.
+    /// Fire-and-forget POST of <c>{"lobby":matchId,"demo_filename":name}</c>
+    /// to the configured map-end URL. Empty/whitespace URL is a no-op.
+    ///
+    /// <paramref name="demoFilename"/> is the exact on-disk GOTV filename
+    /// (including the <c>.dem</c> extension) that the plugin wrote for this
+    /// map. The Laravel backend persists it so the web panel can build a
+    /// direct download link to the file the plugin actually produced.
     /// </summary>
-    public void PostMapEnd(string url, string matchId)
+    public void PostMapEnd(string url, string matchId, string demoFilename)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
 
         string payload = JsonSerializer.Serialize(new
         {
-            lobby = matchId
+            lobby = matchId,
+            demo_filename = demoFilename ?? string.Empty
         });
-        _ = SendAsync(url, payload, $"map_end matchId={matchId}");
+        _ = SendAsync(url, payload, $"map_end matchId={matchId} demo={demoFilename}");
     }
 
     private static async Task SendAsync(string url, string payload, string label)

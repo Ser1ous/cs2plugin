@@ -126,16 +126,27 @@ public class GameModeSwitcher
             return;
         }
 
-        bool isWorkshop = ulong.TryParse(mapName, out _);
-        if (isWorkshop)
+        string trimmed = mapName.Trim();
+
+        if (IsWorkshopId(trimmed))
         {
-            Console.WriteLine($"[CS2Match] DispatchMapChange: host_workshop_map {mapName}");
-            Server.ExecuteCommand($"host_workshop_map {mapName}");
+            Console.WriteLine($"[CS2Match] DispatchMapChange: host_workshop_map {trimmed}");
+            Server.ExecuteCommand($"host_workshop_map {trimmed}");
         }
         else
         {
-            Console.WriteLine($"[CS2Match] DispatchMapChange: changelevel {mapName}");
-            Server.ExecuteCommand($"changelevel {mapName}");
+            Console.WriteLine($"[CS2Match] DispatchMapChange: changelevel {trimmed}");
+            Server.ExecuteCommand($"changelevel {trimmed}");
         }
+    }
+
+    private static bool IsWorkshopId(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return false;
+        foreach (char c in value)
+        {
+            if (c < '0' || c > '9') return false;
+        }
+        return ulong.TryParse(value, out _);
     }
 }
