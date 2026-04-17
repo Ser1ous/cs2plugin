@@ -128,7 +128,7 @@ public class GameModeSwitcher
 
         string trimmed = mapName.Trim();
 
-        if (IsWorkshopId(trimmed))
+        if (MapChanger.IsWorkshopId(trimmed))
         {
             Console.WriteLine($"[CS2Match] DispatchMapChange: host_workshop_map {trimmed}");
             Server.ExecuteCommand($"host_workshop_map {trimmed}");
@@ -138,15 +138,5 @@ public class GameModeSwitcher
             Console.WriteLine($"[CS2Match] DispatchMapChange: changelevel {trimmed}");
             Server.ExecuteCommand($"changelevel {trimmed}");
         }
-    }
-
-    private static bool IsWorkshopId(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return false;
-        foreach (char c in value)
-        {
-            if (c < '0' || c > '9') return false;
-        }
-        return ulong.TryParse(value, out _);
     }
 }

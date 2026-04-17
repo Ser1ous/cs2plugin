@@ -64,7 +64,7 @@ public class MapChanger
         });
     }
 
-    private static bool IsWorkshopId(string value)
+    public static bool IsWorkshopId(string? value)
     {
         if (string.IsNullOrEmpty(value)) return false;
         foreach (char c in value)

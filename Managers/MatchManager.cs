@@ -258,10 +258,23 @@ public class MatchManager
         }
 
         string expected = Context.Config.Maplist[Context.CurrentMapIndex];
-        if (!string.Equals(mapName, expected, StringComparison.OrdinalIgnoreCase))
+
+        // Workshop maplist entries are numeric IDs (e.g. "3437809122"), but the
+        // engine reports the actual VPK name on OnMapStart (e.g. "de_dust2"), so
+        // the string compare would never match. Skip the guard in that case.
+        bool expectedIsWorkshop = MapChanger.IsWorkshopId(expected);
+
+        if (!expectedIsWorkshop &&
+            !string.Equals(mapName, expected, StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine($"[CS2Match] OnMapStart: got '{mapName}', expected '{expected}', ignoring");
             return;
+        }
+
+        if (expectedIsWorkshop)
+        {
+            Console.WriteLine(
+                $"[CS2Match] OnMapStart: workshop id '{expected}' loaded as '{mapName}'");
         }
 
         // mp_restartgame on the same map triggers OnMapStart but we must NOT
@@ -324,7 +337,12 @@ public class MatchManager
         Server.ExecuteCommand("mp_warmup_start");
 
         BroadcastAll($" \x04[Match]\x01 {Context.Config.Team1.Name} vs {Context.Config.Team2.Name}");
-        BroadcastAll($" \x04[Match]\x01 Map: \x0B{Context.Config.Maplist[Context.CurrentMapIndex]}\x01 — type \x09!ready\x01 when ready");
+
+        string mapEntry    = Context.Config.Maplist[Context.CurrentMapIndex];
+        string displayName = MapChanger.IsWorkshopId(mapEntry)
+            ? $"{Server.MapName} (workshop {mapEntry})"
+            : mapEntry;
+        BroadcastAll($" \x04[Match]\x01 Map: \x0B{displayName}\x01 — type \x09!ready\x01 when ready");
 
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "warmup_start");
 
