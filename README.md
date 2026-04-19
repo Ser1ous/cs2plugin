@@ -382,3 +382,6 @@ Their SteamID64 must be listed in `team1.players` or `team2.players` in the matc
 
 **AIM map keeps looping**  
 If the aim map name in `plugin_config.json` doesn't match the actual map file name exactly (case-sensitive on Linux), the plugin will keep trying to switch to it. Verify the map filename with `ls game/csgo/maps/`.
+
+
+dotnet publish cs2plugin.csproj -c Release -o ./publish

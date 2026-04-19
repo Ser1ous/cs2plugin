@@ -760,32 +760,6 @@ public class MatchManager
         string demoBase = GenerateDemoBaseName(Server.MapName);
         Context.DemoName = DemoFilenameWithExtension(demoBase);
 
-        // ---------------------------------------------------------------
-        // Manual GOTV recording — WHY HERE:
-        //
-        // The server runs with tv_autorecord 0 (LinuxGSM auto-recording is
-        // disabled), so the plugin is the sole driver of tv_record /
-        // tv_stoprecord. LogLive() is called from StartLive() right after
-        // mp_warmup_end, and from StartLiveFromKnife() right after
-        // mp_restartgame — i.e. the instant the match transitions into
-        // MatchState.Live, immediately before round 1 begins.
-        //
-        // That placement guarantees the demo captures ONLY the live match:
-        //   - warmup rounds are excluded (we're past mp_warmup_end)
-        //   - the knife round is excluded (knife plays before SidePick,
-        //     and StartLiveFromKnife fires after mp_restartgame clears it)
-        //   - the side-pick pause is excluded (StartLiveFromKnife unpauses
-        //     and restarts before we get here)
-        //
-        // tv_autorecord 0 + tv_stoprecord are defensive: they cancel any
-        // stray auto-recording (e.g. a server cfg that slipped through)
-        // before starting our own, so we never end up with two overlapping
-        // demo files on disk.
-        // ---------------------------------------------------------------
-        Server.ExecuteCommand("tv_autorecord 0");
-        Server.ExecuteCommand("tv_stoprecord");
-        Server.ExecuteCommand($"tv_record {demoBase}");
-
         _ = _db.LogMatchEventAsync(matchId, "match_live", $"{{\"map\":\"{map}\"}}");
         _ = _db.UpdateMatchAsync(matchId, 0, 0, "live", map, mapIdx);
     }
