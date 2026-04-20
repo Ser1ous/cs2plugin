@@ -424,6 +424,18 @@ public class PluginEventHandler
     public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
     {
         var ctx = _matchManager.Context;
+
+        if (ctx?.State == MatchState.Warmup)
+        {
+            var warmupPlayer = @event.Userid;
+            if (warmupPlayer != null && warmupPlayer.IsValid && warmupPlayer.InGameMoneyServices != null)
+            {
+                warmupPlayer.InGameMoneyServices.Account = 16000;
+                Utilities.SetStateChanged(warmupPlayer, "CCSPlayerController", "m_pInGameMoneyServices");
+            }
+            return HookResult.Continue;
+        }
+
         if (ctx?.State != MatchState.Live) return HookResult.Continue;
         var player = @event.Userid;
         if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
