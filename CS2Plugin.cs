@@ -99,6 +99,7 @@ public class CS2Plugin : BasePlugin, IPluginConfig<PluginConfig>
         RegisterEventHandler<EventBombPlanted>        (_eventHandler.OnBombPlanted);
         RegisterEventHandler<EventBombDefused>        (_eventHandler.OnBombDefused);
         RegisterEventHandler<EventBombBegindefuse>    (_eventHandler.OnBombBeginDefuse);
+        RegisterEventHandler<EventBombAbortdefuse>    (_eventHandler.OnBombAbortDefuse);
         RegisterEventHandler<EventBombExploded>       (_eventHandler.OnBombExploded);
         RegisterEventHandler<EventWeaponFire>         (_eventHandler.OnWeaponFire);
         RegisterEventHandler<EventPlayerSpawn>        (_eventHandler.OnPlayerSpawn);

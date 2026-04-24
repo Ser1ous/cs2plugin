@@ -57,6 +57,11 @@ public class MatchContext
     public string LastDefuserName   { get; set; } = "";
     public bool   LastDefuserHasKit { get; set; } = false;
     public float  LastDefuseStartTime { get; set; } = 0f;
+    // Server time at which the last defuse attempt ended (aborted / died).
+    // 0 = attempt is still active (or no attempt yet). Needed so the
+    // bomb_exploded "seconds_needed" reflects actual progress made rather
+    // than wall-clock time since the attempt began.
+    public float  LastDefuseEndTime   { get; set; } = 0f;
 
     // Server time when bomb was planted this round (0 = not planted)
     public float BombPlantTime { get; set; } = 0f;
@@ -73,11 +78,16 @@ public class MatchContext
     public HashSet<ulong> AliveTeam1 { get; set; } = new();
     public HashSet<ulong> AliveTeam2 { get; set; } = new();
 
-    // Clutch: the last surviving player on their team vs N enemies
-    // 0 = no clutch in progress
-    public ulong ClutchPlayerId   { get; set; } = 0;
-    public int   ClutchSituation  { get; set; } = 0;  // 1 = 1v1, 2 = 1v2, 3 = 1v3, 4 = 1v4, 5 = 1v5
-    public int   ClutchPlayerConfigTeam { get; set; } = 0;
+    // Clutch: the last surviving player on their team vs N enemies.
+    // ClutchPlayerId is pinned on the first 1vN detected each round;
+    // ClutchSituationsFaced accumulates every distinct 1vN the clutcher
+    // passes through (e.g. entering at 1v5 and killing two records 5, 4
+    // and 3 — so V3Count increments even when the clutch started at 1v5).
+    // Engine MatchStats is authoritative for 1v1 / 1v2, so only 1v3+ are
+    // added to the set; V1/V2 buckets come from SyncStatsFromEngine.
+    public ulong          ClutchPlayerId         { get; set; } = 0;
+    public int            ClutchPlayerConfigTeam { get; set; } = 0;
+    public HashSet<int>   ClutchSituationsFaced  { get; set; } = new();
 
     // Util success: tracks which players already scored a util hit this round
     // (prevents counting every tick of a molotov as a separate success)

@@ -377,6 +377,17 @@ public class PluginEventHandler
         return HookResult.Continue;
     }
 
+    public HookResult OnBombAbortDefuse(EventBombAbortdefuse @event, GameEventInfo info)
+    {
+        var ctx = _matchManager.Context;
+        if (ctx?.State != MatchState.Live) return HookResult.Continue;
+        var player = @event.Userid;
+        if (player == null || !player.IsValid) return HookResult.Continue;
+
+        _matchManager.RecordDefuseAbort(player.SteamID);
+        return HookResult.Continue;
+    }
+
     public HookResult OnBombExploded(EventBombExploded @event, GameEventInfo info)
     {
         var ctx = _matchManager.Context;
@@ -398,7 +409,7 @@ public class PluginEventHandler
                   defuser         = last.name,
                   steam_id        = last.steamId.ToString(),
                   has_kit         = last.hasKit,
-                  seconds_needed  = Math.Round(last.secondsNeeded, 2)
+                  seconds_needed  = Math.Round(last.secondsNeeded, 3)
               };
 
         _ = _db.LogRoundEventAsync(new RoundEventData(
@@ -428,10 +439,18 @@ public class PluginEventHandler
         if (ctx?.State == MatchState.Warmup)
         {
             var warmupPlayer = @event.Userid;
-            if (warmupPlayer != null && warmupPlayer.IsValid && warmupPlayer.InGameMoneyServices != null)
+            if (warmupPlayer != null && warmupPlayer.IsValid)
             {
-                warmupPlayer.InGameMoneyServices.Account = 16000;
-                Utilities.SetStateChanged(warmupPlayer, "CCSPlayerController", "m_pInGameMoneyServices");
+                if (warmupPlayer.InGameMoneyServices != null)
+                {
+                    warmupPlayer.InGameMoneyServices.Account = 16000;
+                    Utilities.SetStateChanged(warmupPlayer, "CCSPlayerController", "m_pInGameMoneyServices");
+                }
+                // Ready-up must happen after the player is actually on a side.
+                // On fresh connect MarkPlayerConnectedForReady bails (spectator);
+                // the spawn after EnforceSide's team-switch is what completes it.
+                if (!warmupPlayer.IsBot)
+                    _matchManager.MarkPlayerConnectedForReady(warmupPlayer);
             }
             return HookResult.Continue;
         }
@@ -713,8 +732,12 @@ public class PluginEventHandler
         }
 
         // Going to spectator/unassigned is tolerated (rejoin will be enforced).
+        // Keep AliveTeam* in sync so mid-round spec swaps don't hide a 1vN.
         if (newTeam <= (int)TeamSide.Spectator)
+        {
+            _matchManager.HandlePlayerLeftAlive(player.SteamID);
             return HookResult.Continue;
+        }
 
         var expected = enforcement.GetExpectedSide(player.SteamID, ctx);
         if (expected == TeamSide.None) return HookResult.Continue;
@@ -749,6 +772,9 @@ public class PluginEventHandler
         var player = @event.Userid;
         if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
 
+        // Drop from the live AliveTeam* tracking so a mid-round DC can't
+        // leave a phantom "alive" teammate that masks a real 1vN.
+        _matchManager.HandlePlayerLeftAlive(player.SteamID);
         _matchManager.OnPlayerDisconnect();
         return HookResult.Continue;
     }

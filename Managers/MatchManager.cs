@@ -360,16 +360,26 @@ public class MatchManager
     }
 
     /// <summary>
-    /// Replaces the old <c>!ready</c> flow. Called from the connect event
-    /// (and from <see cref="EnterWarmup"/> for already-connected players).
-    /// Marks the player as ready; once the last registered player connects,
+    /// Replaces the old <c>!ready</c> flow. Called from the connect event,
+    /// from <see cref="EnterWarmup"/> for already-connected players, and from
+    /// <c>OnPlayerSpawn</c> once the player has actually spawned on a side.
+    /// Marks the player as ready; once the last registered player is in,
     /// <see cref="ReadyManager"/> fires <c>OnAllReady</c> and the knife round
     /// starts automatically. Idempotent — safe to call on reconnect.
+    ///
+    /// The TeamNum gate below is load-bearing for 1v1: on fresh connect the
+    /// controller is still in spectator (EnforceSide is deferred to the next
+    /// frame), so if we marked ready here the 2nd player's connect would
+    /// synchronously fire OnAllReady → StartKnifeRound before they were placed
+    /// on T/CT, leaving one side empty and auto-awarding the knife round.
+    /// The spawn-path call retries once the player is actually on a side.
     /// </summary>
     public void MarkPlayerConnectedForReady(CCSPlayerController player)
     {
         if (Context?.State != MatchState.Warmup) return;
         if (!_readyManager.IsRegisteredPlayer(player.SteamID)) return;
+        if (player.TeamNum != (int)TeamSide.Terrorist &&
+            player.TeamNum != (int)TeamSide.CounterTerrorist) return;
 
         bool accepted = _readyManager.MarkReady(player.SteamID);
         if (!accepted) return;
@@ -423,6 +433,13 @@ public class MatchManager
             _plugin.AddTimer(2f, SpawnBots);
 
         BroadcastAll(" \x04[Match]\x01 \x09KNIFE ROUND\x01 — winner picks side!");
+
+        _plugin.AddTimer(1f, () =>
+        {
+            for (int i = 0; i < 3; i++)
+                BroadcastAll(" \x02ПРИВІТ ХЛОПЦІ");
+        });
+
         _ = _db.LogMatchEventAsync(Context.Config.MatchId, "knife_start");
         _ = _db.UpdateMatchAsync(Context.Config.MatchId,
             Context.Team1Score, Context.Team2Score, "knife",
@@ -855,8 +872,15 @@ public class MatchManager
             if (entryTeamWon) entryStats.EntryWins++;
         }
 
-        // Credit clutch win if the clutcher's team won this round
-        if (Context.ClutchPlayerId != 0 && Context.PlayerStats.TryGetValue(Context.ClutchPlayerId, out var clutchStats))
+        // Credit clutch counts / wins for every 1vN the clutcher faced this
+        // round. Engine MatchStats.I1v1*/I1v2* are authoritative for V1/V2
+        // (overwritten in SyncStatsFromEngine), so only 1v3+ are recorded
+        // here. A clutch that began at 1v5 and was whittled to 1v3 bumps
+        // V5Count, V4Count, and V3Count — so "I was in a 1v3" is counted
+        // even when the clutch started higher.
+        if (Context.ClutchPlayerId != 0
+            && Context.ClutchSituationsFaced.Count > 0
+            && Context.PlayerStats.TryGetValue(Context.ClutchPlayerId, out var clutchStats))
         {
             int winnerTeamNum = @event.Winner; // 2=T, 3=CT
             bool clutcherWon = (Context.ClutchPlayerConfigTeam == 1 &&
@@ -865,15 +889,14 @@ public class MatchManager
                             || (Context.ClutchPlayerConfigTeam == 2 &&
                                 ((Context.Team2Side == TeamSide.CounterTerrorist && winnerTeamNum == (int)TeamSide.CounterTerrorist) ||
                                  (Context.Team2Side == TeamSide.Terrorist        && winnerTeamNum == (int)TeamSide.Terrorist)));
-            if (clutcherWon)
+
+            foreach (int n in Context.ClutchSituationsFaced)
             {
-                switch (Context.ClutchSituation)
+                switch (n)
                 {
-                    case 1: clutchStats.V1Wins++; break;
-                    case 2: clutchStats.V2Wins++; break;
-                    case 3: clutchStats.V3Wins++; break;
-                    case 4: clutchStats.V4Wins++; break;
-                    case 5: clutchStats.V5Wins++; break;
+                    case 3: clutchStats.V3Count++; if (clutcherWon) clutchStats.V3Wins++; break;
+                    case 4: clutchStats.V4Count++; if (clutcherWon) clutchStats.V4Wins++; break;
+                    case 5: clutchStats.V5Count++; if (clutcherWon) clutchStats.V5Wins++; break;
                 }
             }
         }
@@ -1598,15 +1621,20 @@ public class MatchManager
         CheckClutch();
     }
 
+    /// <summary>
+    /// Re-evaluates the alive sets for a 1vN clutch. Called after every
+    /// death and whenever a player leaves the round alive (disconnect /
+    /// spec swap). Each unique 1vN the clutcher passes through is added
+    /// to <see cref="MatchContext.ClutchSituationsFaced"/>; V1/V2 are
+    /// skipped because engine MatchStats is authoritative for those.
+    /// </summary>
     private void CheckClutch()
     {
         if (Context == null) return;
-        if (Context.ClutchPlayerId != 0) return; // already tracking a clutch this round
 
         int alive1 = Context.AliveTeam1.Count;
         int alive2 = Context.AliveTeam2.Count;
 
-        // 1vN situation: one side has exactly 1 player, other has 1–5
         ulong clutcher = 0;
         int opponents = 0;
         int clutcherConfigTeam = 0;
@@ -1626,21 +1654,49 @@ public class MatchManager
 
         if (clutcher == 0) return;
 
-        Context.ClutchPlayerId         = clutcher;
-        Context.ClutchSituation        = opponents;
-        Context.ClutchPlayerConfigTeam = clutcherConfigTeam;
-
-        if (Context.PlayerStats.TryGetValue(clutcher, out var cs))
+        // Pin the clutcher on first detection. If a new clutcher emerges
+        // later (only possible if the original clutcher already died),
+        // ignore it — we only credit one clutcher per round.
+        if (Context.ClutchPlayerId == 0)
         {
-            switch (opponents)
-            {
-                case 1: cs.V1Count++; break;
-                case 2: cs.V2Count++; break;
-                case 3: cs.V3Count++; break;
-                case 4: cs.V4Count++; break;
-                case 5: cs.V5Count++; break;
-            }
+            Context.ClutchPlayerId         = clutcher;
+            Context.ClutchPlayerConfigTeam = clutcherConfigTeam;
         }
+        else if (Context.ClutchPlayerId != clutcher)
+        {
+            return;
+        }
+
+        // Engine tracks 1v1 / 1v2 (I1v1Count / I1v2Count) — skip to avoid
+        // double-counting with SyncStatsFromEngine. Only 1v3+ is manual.
+        if (opponents >= 3)
+            Context.ClutchSituationsFaced.Add(opponents);
+    }
+
+    /// <summary>
+    /// Called when a registered player leaves the round alive — disconnect
+    /// or mid-round spectator swap. Keeps AliveTeam* in sync so the clutch
+    /// detector sees the real remaining count (e.g. a teammate dropping
+    /// mid-round must not leave a phantom entry that masks a real 1vN).
+    /// </summary>
+    public void HandlePlayerLeftAlive(ulong steamId)
+    {
+        if (Context?.State != MatchState.Live) return;
+
+        bool removed1 = Context.AliveTeam1.Remove(steamId);
+        bool removed2 = Context.AliveTeam2.Remove(steamId);
+        if (!removed1 && !removed2) return;
+
+        // The clutcher themselves just left — they can't win a clutch they
+        // aren't present for, so drop the tracking.
+        if (Context.ClutchPlayerId == steamId)
+        {
+            Context.ClutchPlayerId         = 0;
+            Context.ClutchPlayerConfigTeam = 0;
+            Context.ClutchSituationsFaced.Clear();
+        }
+
+        CheckClutch();
     }
 
     public void RecordAssist(ulong assistSteamId, string assistName, int configTeam, string teamName,
@@ -1721,6 +1777,7 @@ public class MatchManager
         Context.LastDefuserName     = "";
         Context.LastDefuserHasKit   = false;
         Context.LastDefuseStartTime = 0f;
+        Context.LastDefuseEndTime   = 0f;
     }
 
     public void RecordBombDefuse(ulong steamId, string playerName, int configTeam, string teamName, int round)
@@ -1748,16 +1805,39 @@ public class MatchManager
         Context.LastDefuserName     = playerName;
         Context.LastDefuserHasKit   = hasKit;
         Context.LastDefuseStartTime = CounterStrikeSharp.API.Server.CurrentTime;
+        // New attempt is in progress — clear any end-time from a prior one
+        // so GetLastDefuserAtExplosion falls back to the active-defuse path.
+        Context.LastDefuseEndTime   = 0f;
+    }
+
+    /// <summary>
+    /// Called when the defuser stops defusing (dies, releases use, moves off
+    /// the bomb). Records when the most recent attempt ended so we can
+    /// compute real progress rather than assuming continuous defusing.
+    /// </summary>
+    public void RecordDefuseAbort(ulong steamId)
+    {
+        if (Context?.State != MatchState.Live) return;
+        if (Context.ActiveDefuser == steamId)
+            Context.ActiveDefuser = 0;
+        // Only stamp if this matches the tracked last defuser and the
+        // attempt was still active — avoids overwriting a later attempt's
+        // state with a stale abort from a prior defuser this round.
+        if (Context.LastDefuserSteamId == steamId && Context.LastDefuseEndTime == 0f)
+            Context.LastDefuseEndTime = CounterStrikeSharp.API.Server.CurrentTime;
     }
 
     /// <summary>
     /// Last-defuser snapshot used by the bomb_exploded log path. Returns
     /// (steamId=0, ...) if no defuse attempt was made this round.
-    /// <paramref name="secondsNeeded"/> is how much more time the defuser
-    /// needed to finish at the moment the bomb exploded:
-    ///   secondsNeeded = (startTime + duration) - now
-    /// where duration is 5s with kit / 10s without. Clamped to 0 if the
-    /// defuse should already have completed.
+    /// <paramref name="secondsNeeded"/> is how much more continuous defusing
+    /// the player would have needed to finish, measured from the end of
+    /// their last attempt (or the moment of explosion if still active):
+    ///   progress = endTime - startTime  (endTime = abort time, or now)
+    ///   secondsNeeded = max(0, duration - progress)
+    /// duration is 5s with kit / 10s without. The previous formula used
+    /// (startTime + duration) - now, which wrongly reported 0 whenever the
+    /// defuser aborted long enough before the explosion.
     /// </summary>
     public (ulong steamId, string name, bool hasKit, float secondsNeeded) GetLastDefuserAtExplosion()
     {
@@ -1766,7 +1846,12 @@ public class MatchManager
 
         float duration = Context.LastDefuserHasKit ? 5f : 10f;
         float now      = CounterStrikeSharp.API.Server.CurrentTime;
-        float needed   = (Context.LastDefuseStartTime + duration) - now;
+        float endTime  = Context.LastDefuseEndTime > 0f
+            ? Context.LastDefuseEndTime
+            : now;
+        float progress = endTime - Context.LastDefuseStartTime;
+        if (progress < 0f) progress = 0f;
+        float needed   = duration - progress;
         if (needed < 0f) needed = 0f;
 
         return (Context.LastDefuserSteamId,
@@ -1881,8 +1966,8 @@ public class MatchManager
         Context.EntryKillerThisRound   = 0;
         Context.EntryKillerConfigTeam  = 0;
         Context.ClutchPlayerId         = 0;
-        Context.ClutchSituation        = 0;
         Context.ClutchPlayerConfigTeam = 0;
+        Context.ClutchSituationsFaced.Clear();
         Context.AliveTeam1.Clear();
         Context.AliveTeam2.Clear();
         Context.RoundUtilSucceeded.Clear();
