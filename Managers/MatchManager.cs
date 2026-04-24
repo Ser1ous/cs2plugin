@@ -621,6 +621,13 @@ public class MatchManager
         // Same leftover-pause fix as StartKnifeRound: warmup.cfg froze the
         // pause timer, so clear it before exiting warmup.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
+        // Explicitly re-assert overtime baseline. competitive.cfg sets this
+        // too, but a prior OT-draw (see CheckMapWin) or an AIM→match
+        // transition can leave mp_overtime_enable at 0; if that leftover
+        // value survived into regulation a 12-12 tie would end the map as
+        // a draw instead of going to OT. Placed before ExecCvars so the
+        // match JSON can still override if it explicitly wants OT off.
+        Server.ExecuteCommand("mp_overtime_enable 1");
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
         if (HasBots)
             ExecuteBotCvars();
@@ -659,6 +666,11 @@ public class MatchManager
         // mp_unpause_match must come before mp_restartgame — the pause state from
         // mp_pause_match survives a game restart otherwise.
         _cfgExecutor.ExecCfg(_pluginConfig.CompetitiveCfgName);
+        // Re-assert overtime baseline (see StartLive for rationale — a prior
+        // OT-draw or AIM leftover can persist mp_overtime_enable 0 and cause
+        // regulation ties to finish as draws). Placed before ExecCvars so
+        // the match JSON can still override.
+        Server.ExecuteCommand("mp_overtime_enable 1");
         _cfgExecutor.ExecCvars(Context.Config.Cvars);
         if (HasBots)
             ExecuteBotCvars();

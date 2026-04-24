@@ -211,8 +211,13 @@ public class AimManager
     /// </summary>
     public void ClearAimOverrides()
     {
-        Console.WriteLine($"[CS2Match] Clearing AIM overrides (freezetime → {LiveFreezeTimeDefault}s)");
+        Console.WriteLine($"[CS2Match] Clearing AIM overrides (freezetime → {LiveFreezeTimeDefault}s, overtime → enabled)");
         Server.ExecuteCommand($"mp_freezetime {LiveFreezeTimeDefault}");
+        // aim.cfg sets mp_overtime_enable 0; reset it here so the AIM→match
+        // transition can't leave OT disabled for the upcoming warmup/live.
+        // competitive.cfg + StartLive re-assert this too, but resetting now
+        // closes the window between warmup start and live start.
+        Server.ExecuteCommand("mp_overtime_enable 1");
         _aimConfigApplied = false;
     }
 
