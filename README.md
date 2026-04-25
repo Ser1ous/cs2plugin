@@ -385,3 +385,5 @@ If the aim map name in `plugin_config.json` doesn't match the actual map file na
 
 
 dotnet publish cs2plugin.csproj -c Release -o ./publish
+
+test autodeplou
