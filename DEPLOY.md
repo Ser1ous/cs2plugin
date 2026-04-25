@@ -11,7 +11,7 @@
    - калі `/home/cs2server/CS2MatchPlugin` яшчэ не клонаваны — робіцца `git clone` па SSH (Deploy Key);
    - інакш — `git fetch --all --prune` і `git reset --hard origin/main`;
    - `release/CS2MatchPlugin.dll` капіюецца ў `/home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/CS2MatchPlugin/CS2MatchPlugin.dll`;
-   - калі сервер запушчаны (праверка праз `./cs2server details`) — выконваецца `./cs2server send "css_plugins reload CS2MatchPlugin"`.
+   - калі ёсць tmux-сесія LGSM з імем `cs2server` (значыць сервер запушчаны) — выконваецца `./cs2server send "css_plugins reload CS2MatchPlugin"`.
 
 `concurrency: deploy-cs2-server` гарантуе, што два дэплоі не наклаюцца адзін на адзін.
 
@@ -190,6 +190,21 @@ git ls-files release/CS2MatchPlugin.dll
 ```
 
 Калі пуста — файл у `.gitignore` ці проста забыты `git add`.
+
+### `Server is not running, skipping reload`, хоць сервер запушчаны
+
+Workflow правярае запуск праз `tmux has-session -t cs2server`. Калі бачыш гэты warning, але сервер працуе:
+
+- Праверыў пад тым самым карыстальнікам (`cs2server`):
+
+  ```bash
+  tmux ls
+  ```
+
+  Павінна быць радок `cs2server: 1 windows ...`.
+
+- Калі імя сесіі іншае (LGSM `selfname` адрозніваецца ад імя launcher-а) — пагляд на `~/cs2server/lgsm/config-lgsm/cs2server/_default.cfg` ці на `tmux ls`, і памяняй `tmux has-session -t "$(basename "$LGSM_BIN")"` у `deploy.yml` на тое імя, што бачыш у `tmux ls`.
+- Калі сервер запусціў іншы карыстальнік — у яго свая tmux-сесія, з-пад `cs2server` яе не відаць. Перазапусці сервер пад `cs2server` ці памяняй `SSH_USER`.
 
 ### Workflow не трыгерыцца на push
 

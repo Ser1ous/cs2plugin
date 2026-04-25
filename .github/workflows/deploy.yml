@@ -71,15 +71,13 @@ jobs:
           echo "Deployed file checksum:"
           sha256sum "$PLUGIN_DIR/CS2MatchPlugin.dll"
 
-          if [ -x "$LGSM_BIN" ]; then
-            if "$LGSM_BIN" details 2>/dev/null | grep -Eiq 'started|online'; then
-              echo "Server is running, reloading plugin $PLUGIN_NAME"
-              "$LGSM_BIN" send "css_plugins reload $PLUGIN_NAME" \
-                || echo "warn: reload command failed, plugin file is still updated"
-            else
-              echo "Server is not running, skipping reload"
-            fi
-          else
+          if [ ! -x "$LGSM_BIN" ]; then
             echo "LGSM binary not found at $LGSM_BIN, skipping reload"
+          elif tmux has-session -t "$(basename "$LGSM_BIN")" 2>/dev/null; then
+            echo "Server is running, reloading plugin $PLUGIN_NAME"
+            "$LGSM_BIN" send "css_plugins reload $PLUGIN_NAME" \
+              || echo "warn: reload command failed, plugin file is still updated"
+          else
+            echo "Server is not running (no tmux session), skipping reload"
           fi
           REMOTE
