@@ -4,12 +4,12 @@
 
 ## Як гэта працуе
 
-1. Распрацоўшчык робіць `git push` у галіну `master`. У камітах змянены `release/CS2MatchPlugin.dll` (ці сам workflow).
+1. Распрацоўшчык робіць `git push` у галіну `main`. У камітах змянены `release/CS2MatchPlugin.dll` (ці сам workflow).
 2. GitHub Actions запускае workflow `.github/workflows/deploy.yml` на ubuntu-runner-ы.
 3. Runner падключаецца па SSH да CS2-сервера пад карыстальнікам `cs2server`.
 4. На серверы:
    - калі `/home/cs2server/CS2MatchPlugin` яшчэ не клонаваны — робіцца `git clone` па SSH (Deploy Key);
-   - інакш — `git fetch --all --prune` і `git reset --hard origin/master`;
+   - інакш — `git fetch --all --prune` і `git reset --hard origin/main`;
    - `release/CS2MatchPlugin.dll` капіюецца ў `/home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/CS2MatchPlugin/CS2MatchPlugin.dll`;
    - калі сервер запушчаны (праверка праз `./cs2server details`) — выконваецца `./cs2server send "css_plugins reload CS2MatchPlugin"`.
 
@@ -108,7 +108,7 @@ ssh -T git@github.com
 
 ## Як праверыць
 
-1. У GitHub → Actions → `Deploy CS2MatchPlugin` → `Run workflow` → выбраць `master`.
+1. У GitHub → Actions → `Deploy CS2MatchPlugin` → `Run workflow` → выбраць `main`.
 2. Дачакайся, пакуль job стане зялёным.
 3. На серверы:
 
@@ -118,7 +118,7 @@ sha256sum /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugin
 
 Хэш павінен супадаць з тым, што ў логу GitHub Actions у кроку `Deploy on server`.
 
-4. Пасля гэтага любы `git push` у `master`, які мяняе `release/CS2MatchPlugin.dll`, будзе аўтаматычна выкочваць плагін.
+4. Пасля гэтага любы `git push` у `main`, які мяняе `release/CS2MatchPlugin.dll`, будзе аўтаматычна выкочваць плагін.
 
 ## Аўта-перазагрузка плагіна
 

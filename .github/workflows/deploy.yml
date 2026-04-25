@@ -3,7 +3,7 @@ name: Deploy CS2MatchPlugin
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'release/CS2MatchPlugin.dll'
       - '.github/workflows/deploy.yml'
