@@ -11,7 +11,7 @@
    - калі `/home/cs2server/CS2MatchPlugin` яшчэ не клонаваны — робіцца `git clone` па SSH (Deploy Key);
    - інакш — `git fetch --all --prune` і `git reset --hard origin/main`;
    - `release/CS2MatchPlugin.dll` капіюецца ў `/home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/CS2MatchPlugin/CS2MatchPlugin.dll`;
-   - калі ёсць tmux-сесія LGSM з імем `cs2server` (значыць сервер запушчаны) — выконваецца `./cs2server send "css_plugins reload CS2MatchPlugin"`.
+   - калі знойдзены працэс CS2 пад тым жа карыстальнікам (праверка праз `pgrep`) — выконваецца `./cs2server send "css_plugins reload CS2MatchPlugin"`.
 
 `concurrency: deploy-cs2-server` гарантуе, што два дэплоі не наклаюцца адзін на адзін.
 
@@ -193,18 +193,18 @@ git ls-files release/CS2MatchPlugin.dll
 
 ### `Server is not running, skipping reload`, хоць сервер запушчаны
 
-Workflow правярае запуск праз `tmux has-session -t cs2server`. Калі бачыш гэты warning, але сервер працуе:
+Workflow правярае працэс праз `pgrep -u <user> -x cs2`. Калі бачыш warning, але сервер працуе — праверыў пад тым жа карыстальнікам, што і `SSH_USER` (звычайна `cs2server`):
 
-- Праверыў пад тым самым карыстальнікам (`cs2server`):
+```bash
+pgrep -u "$(id -un)" -x cs2
+```
 
-  ```bash
-  tmux ls
-  ```
+Калі вывад пусты:
 
-  Павінна быць радок `cs2server: 1 windows ...`.
+- Сервер запусціў іншы карыстальнік (працэс не належыць `cs2server`) — перазапусці сервер пад `cs2server` ці памяняй `SSH_USER` у secrets.
+- Імя працэса не `cs2` (нестандартная ўстаноўка) — пагляд на `ps -u cs2server -o pid,comm` і памяняй `-x cs2` у `deploy.yml` на правільнае імя.
 
-- Калі імя сесіі іншае (LGSM `selfname` адрозніваецца ад імя launcher-а) — пагляд на `~/cs2server/lgsm/config-lgsm/cs2server/_default.cfg` ці на `tmux ls`, і памяняй `tmux has-session -t "$(basename "$LGSM_BIN")"` у `deploy.yml` на тое імя, што бачыш у `tmux ls`.
-- Калі сервер запусціў іншы карыстальнік — у яго свая tmux-сесія, з-пад `cs2server` яе не відаць. Перазапусці сервер пад `cs2server` ці памяняй `SSH_USER`.
+Заўвага: каманда `tmux ls` без `-L` нічога не пакажа — LGSM выкарыстоўвае ўласны socket (`tmux -L cs2server ls`). Менавіта таму pgrep-праверка надзейней, чым tmux.
 
 ### Workflow не трыгерыцца на push
 

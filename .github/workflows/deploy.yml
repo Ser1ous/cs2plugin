@@ -73,11 +73,11 @@ jobs:
 
           if [ ! -x "$LGSM_BIN" ]; then
             echo "LGSM binary not found at $LGSM_BIN, skipping reload"
-          elif tmux has-session -t "$(basename "$LGSM_BIN")" 2>/dev/null; then
+          elif pgrep -u "$(id -un)" -x cs2 >/dev/null 2>&1; then
             echo "Server is running, reloading plugin $PLUGIN_NAME"
             "$LGSM_BIN" send "css_plugins reload $PLUGIN_NAME" \
               || echo "warn: reload command failed, plugin file is still updated"
           else
-            echo "Server is not running (no tmux session), skipping reload"
+            echo "Server is not running (no cs2 process), skipping reload"
           fi
           REMOTE
