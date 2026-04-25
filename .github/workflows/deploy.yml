@@ -1,0 +1,85 @@
+name: Deploy CS2MatchPlugin
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'release/CS2MatchPlugin.dll'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cs2-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      REPO_URL: git@github.com:${{ github.repository }}.git
+      REPO_DIR: /home/cs2server/CS2MatchPlugin
+      PLUGIN_DIR: /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/CS2MatchPlugin
+      LGSM_BIN: /home/cs2server/cs2server
+      PLUGIN_NAME: CS2MatchPlugin
+      BRANCH: ${{ github.ref_name }}
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy on server
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              "$SSH_USER@$SSH_HOST" \
+              REPO_URL="$REPO_URL" \
+              REPO_DIR="$REPO_DIR" \
+              PLUGIN_DIR="$PLUGIN_DIR" \
+              LGSM_BIN="$LGSM_BIN" \
+              PLUGIN_NAME="$PLUGIN_NAME" \
+              BRANCH="$BRANCH" \
+              bash -s <<'REMOTE'
+          set -euo pipefail
+
+          if [ ! -d "$REPO_DIR/.git" ]; then
+            echo "Cloning $REPO_URL into $REPO_DIR"
+            git clone "$REPO_URL" "$REPO_DIR"
+          fi
+
+          cd "$REPO_DIR"
+          git fetch --all --prune
+          git reset --hard "origin/$BRANCH"
+
+          if [ ! -f "release/CS2MatchPlugin.dll" ]; then
+            echo "release/CS2MatchPlugin.dll not found in repo" >&2
+            exit 1
+          fi
+
+          mkdir -p "$PLUGIN_DIR"
+          cp -f release/CS2MatchPlugin.dll "$PLUGIN_DIR/CS2MatchPlugin.dll"
+
+          echo "Deployed file checksum:"
+          sha256sum "$PLUGIN_DIR/CS2MatchPlugin.dll"
+
+          if [ -x "$LGSM_BIN" ]; then
+            if "$LGSM_BIN" details 2>/dev/null | grep -Eiq 'started|online'; then
+              echo "Server is running, reloading plugin $PLUGIN_NAME"
+              "$LGSM_BIN" send "css_plugins reload $PLUGIN_NAME" \
+                || echo "warn: reload command failed, plugin file is still updated"
+            else
+              echo "Server is not running, skipping reload"
+            fi
+          else
+            echo "LGSM binary not found at $LGSM_BIN, skipping reload"
+          fi
+          REMOTE
