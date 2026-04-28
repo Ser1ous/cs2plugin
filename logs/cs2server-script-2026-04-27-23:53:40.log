@@ -1,0 +1,538 @@
+Apr 27 22:25:27.534 cs2server: START: PASS: Started LinuxGSM
+Apr 27 22:25:27.643 cs2server: START: PASS: Started LinuxGSM
+Apr 27 22:25:27.668 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:25:27.671 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 22:30:01.325 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 22:30:01.345 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 22:30:02.662 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:30:03.598 cs2server: UPDATE: INFO: Using anonymous Steam login
+Apr 27 22:30:06.822 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:30:08.556 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 22:30:08.789 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 22:30:10.402 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 22:30:10.821 cs2server: UPDATE: PASS: Checking local build
+Apr 27 22:30:11.244 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 22:30:11.246 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 22:30:11.249 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 22:30:11.253 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 22:30:11.256 cs2server: MONITOR: INFO: Map: de_ancient
+Apr 27 22:30:11.939 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 22:30:11.942 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:30:11.944 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:30:11.946 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 22:30:11.949 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 22:30:11.952 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 22:30:11.954 cs2server: MONITOR: INFO: * Game Server CPU Used: 1300MHz
+Apr 27 22:30:11.956 cs2server: MONITOR: INFO: * Game Server RAM Used: 1500MB
+Apr 27 22:30:11.958 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 22:30:11.960 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 22:30:11.962 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 22:30:11.965 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 22:30:11.968 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 22:30:11.970 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 22:30:11.972 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 22:30:11.974 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 22:30:11.988 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:30:11.990 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 22:30:19.173 cs2server: UPDATE: PASS: Checking remote build
+Apr 27 22:30:19.883 cs2server: UPDATE: INFO: No update available
+Apr 27 22:30:19.887 cs2server: UPDATE: INFO: Local build: 22948967
+Apr 27 22:30:19.890 cs2server: UPDATE: INFO: Remote build: 22948967
+Apr 27 22:30:19.893 cs2server: UPDATE: INFO: Branch: public
+Apr 27 22:30:19.907 cs2server: UPDATE: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:30:19.910 cs2server: UPDATE: PASS: core_exit.sh exiting with code: 0
+Apr 27 22:35:01.784 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 22:35:03.030 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:35:11.462 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:35:13.190 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 22:35:13.419 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 22:35:15.031 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 22:35:15.845 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 22:35:15.848 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 22:35:15.851 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 22:35:15.854 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 22:35:15.857 cs2server: MONITOR: INFO: Map: de_ancient
+Apr 27 22:35:16.536 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 22:35:16.539 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:35:16.541 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:35:16.543 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 22:35:16.546 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 22:35:16.549 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 22:35:16.551 cs2server: MONITOR: INFO: * Game Server CPU Used: 1400MHz
+Apr 27 22:35:16.553 cs2server: MONITOR: INFO: * Game Server RAM Used: 1500MB
+Apr 27 22:35:16.555 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 22:35:16.557 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 22:35:16.559 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 22:35:16.563 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 22:35:16.565 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 22:35:16.567 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 22:35:16.569 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 22:35:16.571 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 22:35:16.581 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:35:16.584 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 22:40:01.408 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 22:40:02.662 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:40:04.921 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:40:06.642 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 22:40:06.874 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 22:40:08.488 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 22:40:09.308 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 22:40:09.311 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 22:40:09.314 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 22:40:09.317 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 22:40:09.320 cs2server: MONITOR: INFO: Map: de_ancient
+Apr 27 22:40:10.029 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 22:40:10.032 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:40:10.035 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:40:10.037 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 22:40:10.040 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 22:40:10.042 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 22:40:10.044 cs2server: MONITOR: INFO: * Game Server CPU Used: 1400MHz
+Apr 27 22:40:10.046 cs2server: MONITOR: INFO: * Game Server RAM Used: 1400MB
+Apr 27 22:40:10.049 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 22:40:10.051 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 22:40:10.053 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 22:40:10.055 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 22:40:10.058 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 22:40:10.061 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 22:40:10.063 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 22:40:10.066 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 22:40:10.077 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:40:10.079 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 22:45:01.746 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 22:45:03.010 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:45:05.994 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:45:07.735 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 22:45:07.966 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 22:45:09.577 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 22:45:10.366 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 22:45:10.371 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 22:45:10.374 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 22:45:10.377 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 22:45:10.381 cs2server: MONITOR: INFO: Map: de_ancient
+Apr 27 22:45:11.048 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 22:45:11.050 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:45:11.053 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:45:11.055 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 22:45:11.057 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 22:45:11.060 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 22:45:11.062 cs2server: MONITOR: INFO: * Game Server CPU Used: 1500MHz
+Apr 27 22:45:11.064 cs2server: MONITOR: INFO: * Game Server RAM Used: 1600MB
+Apr 27 22:45:11.066 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 22:45:11.068 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 22:45:11.070 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 22:45:11.074 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 22:45:11.076 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 22:45:11.078 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 22:45:11.080 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 22:45:11.083 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 22:45:11.093 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:45:11.095 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 22:50:01.168 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 22:50:02.460 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:50:04.742 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:50:06.475 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 22:50:06.705 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 22:50:08.317 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 22:50:09.242 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 22:50:09.247 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 22:50:09.250 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 22:50:09.254 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 22:50:09.258 cs2server: MONITOR: INFO: Map: de_ancient
+Apr 27 22:50:09.959 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 22:50:09.962 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:50:09.964 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:50:09.967 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 22:50:09.969 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 22:50:09.971 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 22:50:09.974 cs2server: MONITOR: INFO: * Game Server CPU Used: 1500MHz
+Apr 27 22:50:09.977 cs2server: MONITOR: INFO: * Game Server RAM Used: 1600MB
+Apr 27 22:50:09.979 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 22:50:09.981 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 22:50:09.983 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 22:50:09.985 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 22:50:09.988 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 22:50:09.991 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 22:50:09.993 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 22:50:09.995 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 22:50:10.007 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:50:10.009 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 22:55:02.050 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 22:55:03.348 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:55:07.475 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 22:55:09.221 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 22:55:09.451 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 22:55:11.064 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 22:55:11.907 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 22:55:11.910 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 22:55:11.913 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 22:55:11.917 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 22:55:11.919 cs2server: MONITOR: INFO: Map: de_ancient
+Apr 27 22:55:12.584 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 22:55:12.587 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:55:12.589 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 22:55:12.592 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 22:55:12.594 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 22:55:12.596 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 22:55:12.599 cs2server: MONITOR: INFO: * Game Server CPU Used: 1500MHz
+Apr 27 22:55:12.602 cs2server: MONITOR: INFO: * Game Server RAM Used: 1600MB
+Apr 27 22:55:12.604 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 22:55:12.606 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 22:55:12.608 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 22:55:12.611 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 22:55:12.613 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 22:55:12.616 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 22:55:12.618 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 22:55:12.620 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 22:55:12.632 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 22:55:12.634 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:00:01.374 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:00:01.377 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:00:02.765 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:00:03.780 cs2server: UPDATE: INFO: Using anonymous Steam login
+Apr 27 23:00:05.035 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:00:06.763 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:00:07.006 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:00:08.619 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:00:09.465 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:00:09.469 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:00:09.472 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:00:09.476 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:00:09.479 cs2server: MONITOR: INFO: Map: de_ancient
+Apr 27 23:00:10.180 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:00:10.183 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:00:10.186 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:00:10.189 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:00:10.193 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:00:10.197 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:00:10.200 cs2server: MONITOR: INFO: * Game Server CPU Used: 1500MHz
+Apr 27 23:00:10.203 cs2server: MONITOR: INFO: * Game Server RAM Used: 1500MB
+Apr 27 23:00:10.205 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:00:10.209 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:00:10.212 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:00:10.214 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:00:10.217 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:00:10.220 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:00:10.223 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:00:10.227 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:00:10.241 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:00:10.244 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:00:10.886 cs2server: UPDATE: PASS: Checking local build
+Apr 27 23:00:19.314 cs2server: UPDATE: PASS: Checking remote build
+Apr 27 23:00:20.025 cs2server: UPDATE: INFO: No update available
+Apr 27 23:00:20.029 cs2server: UPDATE: INFO: Local build: 22948967
+Apr 27 23:00:20.032 cs2server: UPDATE: INFO: Remote build: 22948967
+Apr 27 23:00:20.035 cs2server: UPDATE: INFO: Branch: public
+Apr 27 23:00:20.052 cs2server: UPDATE: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:00:20.056 cs2server: UPDATE: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:05:01.228 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:05:02.683 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:05:06.825 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:05:08.554 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:05:08.786 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:05:10.398 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:05:11.318 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:05:11.322 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:05:11.325 cs2server: MONITOR: INFO: Players: 5/16
+Apr 27 23:05:11.328 cs2server: MONITOR: INFO: Bots: 3
+Apr 27 23:05:11.331 cs2server: MONITOR: INFO: Map: aim_map
+Apr 27 23:05:12.018 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:05:12.020 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:05:12.023 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:05:12.026 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:05:12.028 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:05:12.030 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:05:12.033 cs2server: MONITOR: INFO: * Game Server CPU Used: 1500MHz
+Apr 27 23:05:12.035 cs2server: MONITOR: INFO: * Game Server RAM Used: 2600MB
+Apr 27 23:05:12.038 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:05:12.040 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:05:12.042 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:05:12.045 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:05:12.048 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:05:12.051 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:05:12.053 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:05:12.055 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:05:12.067 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:05:12.070 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:10:01.228 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:10:02.570 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:10:06.392 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:10:08.138 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:10:08.381 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:10:09.997 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:10:10.914 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:10:10.919 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:10:10.925 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:10:10.931 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:10:10.936 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:10:11.761 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:10:11.765 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:10:11.768 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:10:11.771 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:10:11.774 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:10:11.777 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:10:11.779 cs2server: MONITOR: INFO: * Game Server CPU Used: 1500MHz
+Apr 27 23:10:11.783 cs2server: MONITOR: INFO: * Game Server RAM Used: 1900MB
+Apr 27 23:10:11.786 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:10:11.789 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:10:11.792 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:10:11.795 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:10:11.798 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:10:11.801 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:10:11.804 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:10:11.807 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:10:11.821 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:10:11.824 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:15:01.776 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:15:03.105 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:15:05.382 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:15:07.107 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:15:07.353 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:15:08.969 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:15:09.845 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:15:09.849 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:15:09.854 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:15:09.858 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:15:09.862 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:15:10.658 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:15:10.662 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:15:10.667 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:15:10.670 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:15:10.674 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:15:10.678 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:15:10.682 cs2server: MONITOR: INFO: * Game Server CPU Used: 1500MHz
+Apr 27 23:15:10.686 cs2server: MONITOR: INFO: * Game Server RAM Used: 2000MB
+Apr 27 23:15:10.689 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:15:10.693 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:15:10.698 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:15:10.702 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:15:10.706 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:15:10.710 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:15:10.715 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:15:10.718 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:15:10.734 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:15:10.737 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:20:01.804 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:20:03.083 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:20:06.451 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:20:08.177 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:20:08.411 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:20:10.022 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:20:10.796 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:20:10.800 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:20:10.803 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:20:10.806 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:20:10.809 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:20:11.496 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:20:11.498 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:20:11.501 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:20:11.503 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:20:11.505 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:20:11.507 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:20:11.510 cs2server: MONITOR: INFO: * Game Server CPU Used: 1600MHz
+Apr 27 23:20:11.512 cs2server: MONITOR: INFO: * Game Server RAM Used: 2000MB
+Apr 27 23:20:11.514 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:20:11.516 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:20:11.518 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:20:11.520 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:20:11.522 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:20:11.525 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:20:11.527 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:20:11.530 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:20:11.540 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:20:11.542 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:25:01.931 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:25:03.212 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:25:05.525 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:25:07.265 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:25:07.502 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:25:09.114 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:25:10.043 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:25:10.046 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:25:10.051 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:25:10.054 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:25:10.057 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:25:10.769 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:25:10.772 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:25:10.774 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:25:10.776 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:25:10.778 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:25:10.781 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:25:10.784 cs2server: MONITOR: INFO: * Game Server CPU Used: 1600MHz
+Apr 27 23:25:10.786 cs2server: MONITOR: INFO: * Game Server RAM Used: 2000MB
+Apr 27 23:25:10.788 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:25:10.790 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:25:10.792 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:25:10.795 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:25:10.798 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:25:10.800 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:25:10.802 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:25:10.804 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:25:10.815 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:25:10.817 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:30:01.941 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:30:01.949 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:30:03.172 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:30:04.188 cs2server: UPDATE: INFO: Using anonymous Steam login
+Apr 27 23:30:06.449 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:30:08.195 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:30:08.426 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:30:10.039 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:30:10.387 cs2server: UPDATE: PASS: Checking local build
+Apr 27 23:30:10.861 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:30:10.864 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:30:10.869 cs2server: MONITOR: INFO: Players: 9/16
+Apr 27 23:30:10.872 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:30:10.875 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:30:11.541 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:30:11.543 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:30:11.545 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:30:11.547 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:30:11.550 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:30:11.552 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:30:11.555 cs2server: MONITOR: INFO: * Game Server CPU Used: 1600MHz
+Apr 27 23:30:11.557 cs2server: MONITOR: INFO: * Game Server RAM Used: 2000MB
+Apr 27 23:30:11.559 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:30:11.561 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:30:11.563 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:30:11.566 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:30:11.568 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:30:11.570 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:30:11.573 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:30:11.575 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:30:11.584 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:30:11.588 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:30:18.851 cs2server: UPDATE: PASS: Checking remote build
+Apr 27 23:30:19.562 cs2server: UPDATE: INFO: No update available
+Apr 27 23:30:19.567 cs2server: UPDATE: INFO: Local build: 22948967
+Apr 27 23:30:19.572 cs2server: UPDATE: INFO: Remote build: 22948967
+Apr 27 23:30:19.575 cs2server: UPDATE: INFO: Branch: public
+Apr 27 23:30:19.590 cs2server: UPDATE: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:30:19.593 cs2server: UPDATE: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:35:01.656 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:35:02.882 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:35:05.233 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:35:06.966 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:35:07.199 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:35:08.810 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:35:09.609 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:35:09.613 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:35:09.615 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:35:09.618 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:35:09.622 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:35:10.259 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:35:10.262 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:35:10.266 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:35:10.268 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:35:10.270 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:35:10.273 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:35:10.275 cs2server: MONITOR: INFO: * Game Server CPU Used: 1600MHz
+Apr 27 23:35:10.282 cs2server: MONITOR: INFO: * Game Server RAM Used: 2000MB
+Apr 27 23:35:10.284 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:35:10.286 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:35:10.289 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:35:10.291 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:35:10.293 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:35:10.296 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:35:10.298 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:35:10.300 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:35:10.310 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:35:10.313 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:40:01.958 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:40:03.237 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:40:06.996 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:40:08.722 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:40:08.956 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:40:10.567 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:40:11.371 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:40:11.374 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:40:11.377 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:40:11.380 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:40:11.383 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:40:12.018 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:40:12.020 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:40:12.022 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:40:12.024 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:40:12.028 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:40:12.030 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:40:12.032 cs2server: MONITOR: INFO: * Game Server CPU Used: 1600MHz
+Apr 27 23:40:12.034 cs2server: MONITOR: INFO: * Game Server RAM Used: 2000MB
+Apr 27 23:40:12.036 cs2server: MONITOR: INFO: * Game Server Disk Used: 63G
+Apr 27 23:40:12.038 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:40:12.040 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:40:12.044 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:40:12.046 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:40:12.048 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:40:12.050 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:40:12.052 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:40:12.062 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:40:12.064 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:45:01.882 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:45:03.128 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:45:05.356 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:45:07.102 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:45:07.334 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:45:08.946 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:45:09.821 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:45:09.824 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:45:09.827 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:45:09.831 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:45:09.834 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:45:10.494 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:45:10.496 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:45:10.499 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:45:10.501 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:45:10.504 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:45:10.507 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:45:10.509 cs2server: MONITOR: INFO: * Game Server CPU Used: 1600MHz
+Apr 27 23:45:10.512 cs2server: MONITOR: INFO: * Game Server RAM Used: 2000MB
+Apr 27 23:45:10.514 cs2server: MONITOR: INFO: * Game Server Disk Used: 64G
+Apr 27 23:45:10.516 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:45:10.520 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:45:10.522 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:45:10.524 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:45:10.526 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:45:10.528 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:45:10.530 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:45:10.540 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:45:10.542 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:50:01.403 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:50:02.669 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:50:06.285 cs2server: MONITOR: PASS: Using cached IP as public IP address
+Apr 27 23:50:08.034 cs2server: MONITOR: INFO: Checking session: CHECKING
+Apr 27 23:50:08.265 cs2server: MONITOR: PASS: Checking session: OK
+Apr 27 23:50:09.876 cs2server: MONITOR: INFO: Querying port: gamedig: 127.0.0.1:27015 : 1 : QUERYING
+Apr 27 23:50:10.727 cs2server: MONITOR: PASS: Querying port: gamedig: 127.0.0.1:27015 : 1 : OK
+Apr 27 23:50:10.730 cs2server: MONITOR: INFO: Server name: LinuxGSM
+Apr 27 23:50:10.733 cs2server: MONITOR: INFO: Players: 10/16
+Apr 27 23:50:10.736 cs2server: MONITOR: INFO: Bots: 1
+Apr 27 23:50:10.739 cs2server: MONITOR: INFO: Map: de_anubis
+Apr 27 23:50:11.375 cs2server: MONITOR: INFO: Send LinuxGSM stats
+Apr 27 23:50:11.378 cs2server: MONITOR: INFO: * uuid-cs2server: instance_gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:50:11.381 cs2server: MONITOR: INFO: * uuid-install: gifted_lehmann_dccc0fc8-6cc4-4a8f-9059-80d4a224c11b
+Apr 27 23:50:11.383 cs2server: MONITOR: INFO: * uuid-hardware: fd6a292a537147bd8b5c0de8f18be041
+Apr 27 23:50:11.386 cs2server: MONITOR: INFO: * Game Name: Counter-Strike 2
+Apr 27 23:50:11.388 cs2server: MONITOR: INFO: * Distro Name: Ubuntu 22.04.5 LTS
+Apr 27 23:50:11.391 cs2server: MONITOR: INFO: * Game Server CPU Used: 1600MHz
+Apr 27 23:50:11.393 cs2server: MONITOR: INFO: * Game Server RAM Used: 2100MB
+Apr 27 23:50:11.395 cs2server: MONITOR: INFO: * Game Server Disk Used: 64G
+Apr 27 23:50:11.398 cs2server: MONITOR: INFO: * Server CPU Model: Intel Xeon Processor (Skylake, IBRS)
+Apr 27 23:50:11.400 cs2server: MONITOR: INFO: * Server CPU Frequency: 2394.380
+Apr 27 23:50:11.403 cs2server: MONITOR: INFO: * Server RAM: 15GB
+Apr 27 23:50:11.405 cs2server: MONITOR: INFO: * Server Disk: 97G
+Apr 27 23:50:11.407 cs2server: MONITOR: INFO: * Virtual Environment: kvm
+Apr 27 23:50:11.410 cs2server: MONITOR: INFO: * LinuxGSM Version: v26.1.0
+Apr 27 23:50:11.412 cs2server: MONITOR: INFO: * Enabled Alerts
+Apr 27 23:50:11.424 cs2server: MONITOR: INFO: LinuxGSM version: v26.1.0
+Apr 27 23:50:11.426 cs2server: MONITOR: PASS: core_exit.sh exiting with code: 0
+Apr 27 23:53:39.962 cs2server: CORE: PASS: Using cached IP as public IP address
+Apr 27 23:53:42.002 cs2server: RESTART: PASS: Using cached IP as public IP address
+Apr 27 23:53:42.624 cs2server: RESTART: INFO: Using anonymous Steam login
+Apr 27 23:53:44.839 cs2server: RESTART: PASS: Using cached IP as public IP address
+Apr 27 23:53:45.696 cs2server: STOP: PASS: Using cached IP as public IP address
+Apr 27 23:53:47.926 cs2server: STOP: PASS: Using cached IP as public IP address
+Apr 27 23:53:48.655 cs2server: STOP: INFO: Graceful: sending "quit"
+Apr 27 23:53:53.688 cs2server: STOP: PASS: Graceful: sending "quit": OK: 3 seconds
+Apr 27 23:53:55.862 cs2server: START: PASS: Using cached IP as public IP address
+Apr 27 23:53:57.951 cs2server: START: PASS: Using cached IP as public IP address
+Apr 27 23:53:58.691 cs2server: START: INFO: Rotating log files

@@ -1,0 +1,157 @@
+2026-04-27 18:28:25.432 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 18:34:04.867 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:05:08.975 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:19:13.535 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 22:19:13.653 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 22:19:13.660 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 22:19:13.665 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 22:19:13.665 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 22:19:13.667 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 22:19:13.667 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 22:19:13.669 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 22:19:13.956 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 22:19:14.422 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 22:19:14.435 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 22:19:14.752 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 22:19:14.781 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 22:19:14.937 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
+2026-04-27 22:19:17.079 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:19:18.881 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:19:21.219 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:25:16.462 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 22:25:16.583 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 22:25:16.590 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 22:25:16.593 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 22:25:16.593 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 22:25:16.595 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 22:25:16.595 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 22:25:16.596 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 22:25:16.875 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 22:25:17.294 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 22:25:17.307 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 22:25:17.573 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 22:25:17.599 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 22:25:17.732 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
+2026-04-27 22:25:29.112 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 22:25:29.224 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 22:25:29.232 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 22:25:29.235 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 22:25:29.236 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 22:25:29.237 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 22:25:29.237 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 22:25:29.238 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 22:25:29.501 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 22:25:29.959 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 22:25:29.974 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 22:25:30.239 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 22:25:30.263 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 22:25:30.397 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
+2026-04-27 22:25:32.951 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:25:34.816 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:25:37.267 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 22:26:16.094 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 23:04:54.825 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 23:05:53.647 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 23:09:48.834 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:09:48.835 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:11:13.367 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:11:13.368 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:15:30.088 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:15:30.089 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:15:40.024 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:15:40.024 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:15:58.798 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:15:58.799 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:16:50.561 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:16:50.562 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:17:02.921 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:17:02.922 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:17:05.513 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:17:05.514 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:17:07.948 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:17:07.949 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:17:10.326 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:17:10.327 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:17:12.151 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:17:12.151 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:18:19.422 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:18:19.422 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:18:27.062 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:18:27.063 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:19:00.148 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:19:00.148 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:20:23.159 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:20:23.160 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:20:45.495 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:20:45.496 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:21:42.429 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:21:42.430 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:27:03.355 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:27:03.356 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:27:07.874 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:27:07.874 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:29:00.600 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:29:00.601 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:29:06.366 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:29:06.366 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:30:43.371 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:30:43.373 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:30:51.388 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:30:51.389 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:30:53.640 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:30:53.640 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:31:01.717 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:31:01.718 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:31:06.263 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:31:06.263 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:32:35.695 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:32:35.698 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:32:45.651 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:32:45.651 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:33:04.900 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:33:04.901 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:33:06.261 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:33:06.262 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:33:26.213 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:33:26.214 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:33:29.385 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:33:29.385 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:36:28.761 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:36:28.761 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:38:45.420 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:38:45.421 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:39:55.076 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:39:55.077 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:40:35.437 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:40:35.439 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:42:34.516 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:42:34.516 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:42:55.764 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:42:55.765 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:46:04.046 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:46:04.046 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:47:57.248 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:47:57.248 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:48:19.262 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:48:19.263 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:48:44.645 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:48:44.645 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:48:56.191 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:48:56.192 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:54:01.855 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 23:54:01.994 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 23:54:02.002 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 23:54:02.006 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 23:54:02.006 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 23:54:02.007 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 23:54:02.007 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 23:54:02.008 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 23:54:02.365 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 23:54:02.853 +03:00 [INFO] plugin:SkinChangePlugin Loaded 1 skin profile(s) from MySQL (127.0.0.1/cs2server)
+2026-04-27 23:54:02.865 +03:00 [WARN] plugin:SkinChangePlugin skins_legacy.json not found at /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/plugins/SkinChangePlugin/skins_legacy.json — all skins will use the legacy bodygroup.
+2026-04-27 23:54:03.148 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 23:54:03.171 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 23:54:03.297 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
+2026-04-27 23:54:05.255 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 23:54:07.145 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)
+2026-04-27 23:54:09.503 +03:00 [INFO] plugin:SkinChangePlugin Precached 0 agent model(s)

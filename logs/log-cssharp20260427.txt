@@ -1,0 +1,48 @@
+2026-04-27 22:19:13.535 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 22:19:13.653 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 22:19:13.660 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 22:19:13.665 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 22:19:13.665 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 22:19:13.667 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 22:19:13.667 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 22:19:13.669 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 22:19:13.956 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 22:19:14.752 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 22:19:14.781 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 22:19:14.937 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
+2026-04-27 22:25:16.462 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 22:25:16.583 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 22:25:16.590 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 22:25:16.593 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 22:25:16.593 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 22:25:16.595 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 22:25:16.595 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 22:25:16.596 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 22:25:16.875 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 22:25:17.573 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 22:25:17.599 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 22:25:17.732 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
+2026-04-27 22:25:29.112 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 22:25:29.224 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 22:25:29.232 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 22:25:29.235 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 22:25:29.236 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 22:25:29.237 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 22:25:29.237 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 22:25:29.238 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 22:25:29.501 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 22:25:30.239 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 22:25:30.263 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 22:25:30.397 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
+2026-04-27 23:54:01.855 +03:00 [INFO] (cssharp:Core) CounterStrikeSharp is starting up...
+2026-04-27 23:54:01.994 +03:00 [INFO] (cssharp:CoreConfig) Successfully loaded core configuration
+2026-04-27 23:54:02.002 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 45 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/gamedata.json
+2026-04-27 23:54:02.006 +03:00 [INFO] (cssharp:GameDataProvider) Successfully loaded 1 game data entries from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/gamedata/SkinChangePlugin.json
+2026-04-27 23:54:02.006 +03:00 [INFO] (cssharp:Core) Loading Admins from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admins.json
+2026-04-27 23:54:02.007 +03:00 [WARN] (cssharp:AdminManager) Admin data file not found. Skipping admin data load.
+2026-04-27 23:54:02.007 +03:00 [INFO] (cssharp:Core) Loading Admin Groups from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_groups.json
+2026-04-27 23:54:02.008 +03:00 [INFO] (cssharp:Core) Loading Admin Command Overrides from /home/cs2server/serverfiles/game/csgo/addons/counterstrikesharp/configs/admin_overrides.json
+2026-04-27 23:54:02.365 +03:00 [INFO] (cssharp:PluginContext) Loading plugin SkinChangePlugin
+2026-04-27 23:54:03.148 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin SkinChangePlugin
+2026-04-27 23:54:03.171 +03:00 [INFO] (cssharp:PluginContext) Loading plugin CS2MatchPlugin
+2026-04-27 23:54:03.297 +03:00 [INFO] (cssharp:PluginContext) Finished loading plugin CS2 Match Plugin
