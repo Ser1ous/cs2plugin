@@ -836,7 +836,12 @@ public class MatchManager
             return;
         }
 
-        if (Context.State != MatchState.Live) return;
+        // Process round-end during Paused too: a round can complete while a
+        // tech pause is queued (pause kicks in on the next freeze period), and
+        // skipping the handler here drops the score increment, halftime swap,
+        // and webhook for that round. The plugin's round counter would then
+        // diverge from the engine's by one for the rest of the match.
+        if (Context.State != MatchState.Live && Context.State != MatchState.Paused) return;
 
         Context.RoundEnded = true;
 
@@ -852,7 +857,11 @@ public class MatchManager
             else Context.Team2Score++;
         }
 
-        int round = Context.Team1Score + Context.Team2Score;
+        // Use the round number pinned at round start (engine-sourced when
+        // available). Falls back to score-sum if pinning didn't run.
+        int round = Context.CurrentRound > 0
+            ? Context.CurrentRound
+            : Context.Team1Score + Context.Team2Score;
         _ = _db.LogRoundEventAsync(new RoundEventData(
             Context.Config.MatchId, round, "round_end",
             Context.Team1Score, Context.Team2Score, @event.Winner));
@@ -1974,7 +1983,14 @@ public class MatchManager
         // GetCurrentRound() reads this field so post-round events (planted_c4 kills,
         // etc.) that fire after OnRoundEnd has already incremented the scores will
         // still return the correct round.
-        Context.CurrentRound = Context.Team1Score + Context.Team2Score + 1;
+        //
+        // Source of truth is the engine's m_totalRoundsPlayed: it stays correct
+        // even if a previous round's OnRoundEnd was skipped (e.g. paused state)
+        // or @event.Winner was 0 so neither score was incremented.
+        int? engineRoundsCompleted = GetEngineRoundsCompleted();
+        Context.CurrentRound = engineRoundsCompleted.HasValue
+            ? engineRoundsCompleted.Value + 1
+            : Context.Team1Score + Context.Team2Score + 1;
         Context.EntryKillerThisRound   = 0;
         Context.EntryKillerConfigTeam  = 0;
         Context.ClutchPlayerId         = 0;
@@ -2076,6 +2092,18 @@ public class MatchManager
         return Context.CurrentRound > 0
             ? Context.CurrentRound
             : Context.Team1Score + Context.Team2Score + 1;
+    }
+
+    /// <summary>
+    /// Reads the engine's authoritative completed-rounds counter
+    /// (m_totalRoundsPlayed) from the live GameRules entity. Returns null only
+    /// when the rules entity isn't yet available (very early during map load).
+    /// </summary>
+    private static int? GetEngineRoundsCompleted()
+    {
+        var rules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules")
+            .FirstOrDefault()?.GameRules;
+        return rules?.TotalRoundsPlayed;
     }
 
     private static void BroadcastAll(string message)
